@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>東京旅遊助手</title>
+    
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* 隱藏滾動條但保留功能 */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* 模擬手機 App 的容器 */
+        body {
+            background-color: #f3f4f6;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        .app-container {
+            max-width: 480px; /* 手機寬度 */
+            margin: 0 auto;
+            background-color: #ffffff;
+            min-height: 100vh;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0,0,0,0.05);
+            padding-bottom: 80px; /* 留給底部導航 */
+        }
+
+        /* 轉場動畫 */
+        .fade-enter-active, .fade-leave-active {
+            transition: opacity 0.2s ease;
+        }
+        .fade-enter-from, .fade-leave-to {
+            opacity: 0;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app" class="app-container">
+
+    <header class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 rounded-b-3xl shadow-lg sticky top-0 z-20">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold">Tokyo Trip <i class="fa-solid fa-plane-departure ml-1"></i></h1>
+                <p class="text-indigo-100 text-sm opacity-90">我的東京自由行</p>
+            </div>
+            <div class="bg-white/20 p-2 rounded-full cursor-pointer" @click="resetAllData" title="重置資料">
+                <i class="fa-solid fa-rotate-right text-white"></i>
+            </div>
+        </div>
+    </header>
+
+    <main class="p-4">
+        
+        <div v-if="currentView === 'itinerary'">
+            <div class="flex space-x-3 overflow-x-auto no-scrollbar mb-6 pb-2">
+                <button 
+                    v-for="(day, index) in itinerary" 
+                    :key="index"
+                    @click="activeDayIdx = index"
+                    class="flex-shrink-0 px-5 py-2 rounded-full text-sm font-semibold transition-all shadow-sm"
+                    :class="activeDayIdx === index ? 'bg-indigo-600 text-white shadow-indigo-200 ring-2 ring-offset-1 ring-indigo-600' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'"
+                >
+                    Day {{ index + 1 }}
+                </button>
+                <button @click="addDay" class="flex-shrink-0 px-4 py-2 rounded-full bg-indigo-50 text-indigo-600 text-sm font-bold border border-indigo-100">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <div v-if="itinerary[activeDayIdx].events.length === 0" class="text-center py-10 text-gray-400">
+                    <i class="fa-regular fa-calendar-xmark text-4xl mb-3"></i>
+                    <p>這天還沒有行程，快去安排吧！</p>
+                </div>
+
+                <div v-for="(event, eIdx) in itinerary[activeDayIdx].events" :key="eIdx" class="relative pl-4 border-l-2 border-indigo-100 group">
+                    <div class="absolute -left-[9px] top-0 w-4 h-4 bg-indigo-600 rounded-full border-4 border-white shadow-sm"></div>
+                    
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-2 hover:shadow-md transition-shadow">
+                        <div class="flex justify-between items-start mb-1">
+                            <span class="inline-block bg-indigo-50 text-indigo-700 text-xs font-bold px-2 py-1 rounded-md">
+                                {{ event.time }}
+                            </span>
+                            <div class="flex space-x-3 text-gray-400">
+                                <button @click="openMap(event.location)" class="hover:text-green-600 transition-colors">
+                                    <i class="fa-solid fa-map-location-dot text-lg"></i>
+                                </button>
+                                <button @click="deleteEvent(eIdx)" class="hover:text-red-500 transition-colors">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <h3 class="font-bold text-gray-800 text-lg">{{ event.location }}</h3>
+                        <p class="text-gray-500 text-sm mt-1 whitespace-pre-line">{{ event.note }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <button @click="showEventModal = true" class="fixed bottom-24 right-6 bg-indigo-600 hover:bg-indigo-700 text-white w-14 h-14 rounded-full shadow-xl flex items-center justify-center text-2xl transition-transform active:scale-90 z-30">
+                <i class="fa-solid fa-plus"></i>
+            </button>
+        </div>
+
+        <div v-else-if="currentView === 'expenses'">
+            
+            <div class="bg-white p-5 rounded-2xl shadow-md border border-gray-100 mb-6">
+                <h3 class="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2">目前總支出</h3>
+                <div class="flex items-baseline">
+                    <span class="text-3xl font-bold text-gray-800">¥{{ totalExpense.toLocaleString() }}</span>
+                </div>
+                <div class="mt-4 pt-4 border-t border-gray-100">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm font-semibold text-gray-700">結算結果 (建議)</span>
+                        <button @click="showMembersModal = true" class="text-xs text-indigo-600 bg-indigo-50 px-2 py-1 rounded hover:bg-indigo-100">
+                            管理成員
+                        </button>
+                    </div>
+                    <div v-if="debts.length === 0" class="text-sm text-gray-400">目前沒有需要結算的款項。</div>
+                    <ul class="space-y-2">
+                        <li v-for="debt in debts" class="text-sm flex items-center justify-between bg-gray-50 p-2 rounded-lg">
+                            <span class="font-medium text-gray-700">{{ debt.from }}</span>
+                            <span class="text-gray-400 mx-1"><i class="fa-solid fa-arrow-right text-xs"></i> 給 <i class="fa-solid fa-arrow-right text-xs"></i></span>
+                            <span class="font-medium text-gray-700">{{ debt.to }}</span>
+                            <span class="font-bold text-red-500 ml-2">¥{{ Math.round(debt.amount).toLocaleString() }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3 class="font-bold text-gray-800 text-lg mb-3 px-1">支出紀錄</h3>
+            <div class="space-y-3 pb-20">
+                <div v-if="expenses.length === 0" class="text-center py-8 text-gray-400 bg-white rounded-xl border border-dashed border-gray-300">
+                    <i class="fa-solid fa-receipt text-3xl mb-2"></i>
+                    <p>還沒有消費紀錄</p>
+                </div>
+
+                <div v-for="(exp, index) in expenses" :key="index" class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-purple-100 w-10 h-10 rounded-full flex items-center justify-center text-purple-600 font-bold text-sm">
+                            {{ exp.payer[0] }}
+                        </div>
+                        <div>
+                            <p class="font-bold text-gray-800">{{ exp.title }}</p>
+                            <p class="text-xs text-gray-500">{{ exp.payer }} 先付</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-bold text-gray-800">¥{{ parseInt(exp.amount).toLocaleString() }}</p>
+                        <button @click="deleteExpense(index)" class="text-xs text-red-400 mt-1 hover:text-red-600">刪除</button>
+                    </div>
+                </div>
+            </div>
+
+             <button @click="showExpenseModal = true" class="fixed bottom-24 right-6 bg-purple-600 hover:bg-purple-700 text-white w-14 h-14 rounded-full shadow-xl flex items-center justify-center text-2xl transition-transform active:scale-90 z-30">
+                <i class="fa-solid fa-plus"></i>
+            </button>
+        </div>
+
+    </main>
+
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around py-3 pb-6 z-40 max-w-[480px] mx-auto shadow-[0_-5px_10px_rgba(0,0,0,0.02)]">
+        <button 
+            @click="currentView = 'itinerary'" 
+            class="flex flex-col items-center space-y-1 w-full transition-colors"
+            :class="currentView === 'itinerary' ? 'text-indigo-600' : 'text-gray-400'"
+        >
+            <i class="fa-solid fa-calendar-day text-xl"></i>
+            <span class="text-xs font-medium">行程</span>
+        </button>
+        
+        <button 
+            @click="currentView = 'expenses'" 
+            class="flex flex-col items-center space-y-1 w-full transition-colors"
+            :class="currentView === 'expenses' ? 'text-purple-600' : 'text-gray-400'"
+        >
+            <i class="fa-solid fa-calculator text-xl"></i>
+            <span class="text-xs font-medium">分帳</span>
+        </button>
+    </nav>
+
+    <div v-if="showEventModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl animate-bounce-in">
+            <h3 class="text-xl font-bold mb-4 text-gray-800">新增行程 (Day {{ activeDayIdx + 1 }})</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">時間</label>
+                    <input v-model="newEvent.time" type="time" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">地點 / 景點</label>
+                    <input v-model="newEvent.location" type="text" placeholder="例：東京鐵塔" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">備註</label>
+                    <textarea v-model="newEvent.note" rows="3" placeholder="預約號碼、必買清單..." class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                </div>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button @click="showEventModal = false" class="flex-1 py-2.5 rounded-xl font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200">取消</button>
+                <button @click="submitEvent" class="flex-1 py-2.5 rounded-xl font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-200">新增</button>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="showExpenseModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+            <h3 class="text-xl font-bold mb-4 text-gray-800">記一筆</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">項目</label>
+                    <input v-model="newExpense.title" type="text" placeholder="例：敘敘苑燒肉" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">金額 (日圓)</label>
+                    <input v-model="newExpense.amount" type="number" placeholder="0" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">誰先付的？</label>
+                    <div class="flex flex-wrap gap-2">
+                        <button 
+                            v-for="member in members" 
+                            :key="member"
+                            @click="newExpense.payer = member"
+                            class="px-3 py-1.5 rounded-lg text-sm transition-colors border"
+                            :class="newExpense.payer === member ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-600 border-gray-200'"
+                        >
+                            {{ member }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button @click="showExpenseModal = false" class="flex-1 py-2.5 rounded-xl font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200">取消</button>
+                <button @click="submitExpense" class="flex-1 py-2.5 rounded-xl font-semibold text-white bg-purple-600 hover:bg-purple-700 shadow-lg shadow-purple-200">儲存</button>
+            </div>
+        </div>
+    </div>
+
+     <div v-if="showMembersModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+            <h3 class="text-xl font-bold mb-4 text-gray-800">管理成員</h3>
+            <div class="mb-4">
+                <div class="flex gap-2">
+                    <input v-model="newMemberName" type="text" placeholder="輸入名字" class="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                    <button @click="addMember" class="bg-indigo-600 text-white px-4 rounded-lg"><i class="fa-solid fa-plus"></i></button>
+                </div>
+            </div>
+            <ul class="space-y-2 mb-6">
+                <li v-for="(member, idx) in members" class="flex justify-between items-center bg-gray-50 px-3 py-2 rounded-lg">
+                    <span>{{ member }}</span>
+                    <button @click="removeMember(idx)" class="text-red-400 hover:text-red-600" v-if="members.length > 1"><i class="fa-solid fa-xmark"></i></button>
+                </li>
+            </ul>
+            <button @click="showMembersModal = false" class="w-full py-2.5 rounded-xl font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200">完成</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const { createApp } = Vue;
+
+    createApp({
+        data() {
+            return {
+                currentView: 'itinerary', // 'itinerary' or 'expenses'
+                activeDayIdx: 0,
+                
+                // Modal States
+                showEventModal: false,
+                showExpenseModal: false,
+                showMembersModal: false,
+
+                // Data Models
+                members: ['我', '旅伴A'],
+                newMemberName: '',
+                
+                itinerary: [
+                    { 
+                        date: 'Day 1', 
+                        events: [
+                            { time: '10:00', location: '成田機場', note: '領取 JR Pass & SUICA' },
+                            { time: '14:00', location: '淺草寺', note: '記得去遊客中心頂樓看晴空塔風景' }
+                        ] 
+                    },
+                    { date: 'Day 2', events: [] },
+                    { date: 'Day 3', events: [] }
+                ],
+                
+                expenses: [],
+
+                // Form Inputs
+                newEvent: { time: '', location: '', note: '' },
+                newExpense: { title: '', amount: '', payer: '我' }
+            }
+        },
+        computed: {
+            totalExpense() {
+                return this.expenses.reduce((sum, item) => sum + Number(item.amount), 0);
+            },
+            debts() {
+                // 分帳邏輯：計算每個人付了多少，應該付多少 (假設平分)
+                let balance = {};
+                this.members.forEach(m => balance[m] = 0);
+                
+                const splitCount = this.members.length;
+                if(splitCount === 0) return [];
+
+                this.expenses.forEach(exp => {
+                    const amount = Number(exp.amount);
+                    const payer = exp.payer;
+                    const share = amount / splitCount;
+
+                    if(balance[payer] !== undefined) {
+                        balance[payer] += amount; // 先付的人 + 總額
+                    }
+                    
+                    // 每個人都要扣掉應付的份額
+                    this.members.forEach(m => {
+                         balance[m] -= share; 
+                    });
+                });
+
+                // 計算誰該給誰
+                let debtors = [];
+                let creditors = [];
+
+                for (const [member, amount] of Object.entries(balance)) {
+                    if (amount < -1) debtors.push({ member, amount }); // 負數代表少付了 (欠錢)
+                    if (amount > 1) creditors.push({ member, amount }); // 正數代表多付了 (收錢)
+                }
+
+                debtors.sort((a, b) => a.amount - b.amount);
+                creditors.sort((a, b) => b.amount - a.amount);
+
+                let transactions = [];
+                let i = 0; 
+                let j = 0;
+
+                while (i < debtors.length && j < creditors.length) {
+                    let debtor = debtors[i];
+                    let creditor = creditors[j];
+                    
+                    // 取兩者絕對值較小者作為還款金額
+                    let amount = Math.min(Math.abs(debtor.amount), creditor.amount);
+                    
+                    transactions.push({
+                        from: debtor.member,
+                        to: creditor.member,
+                        amount: amount
+                    });
+
+                    debtor.amount += amount;
+                    creditor.amount -= amount;
+
+                    if (Math.abs(debtor.amount) < 1) i++;
+                    if (creditor.amount < 1) j++;
+                }
+
+                return transactions;
+            }
+        },
+        mounted() {
+            this.loadData();
+        },
+        watch: {
+            itinerary: { handler() { this.saveData() }, deep: true },
+            expenses: { handler() { this.saveData() }, deep: true },
+            members: { handler() { this.saveData() }, deep: true }
+        },
+        methods: {
+            // Itinerary Methods
+            addDay() {
+                this.itinerary.push({ date: `Day ${this.itinerary.length + 1}`, events: [] });
+                this.activeDayIdx = this.itinerary.length - 1;
+            },
+            submitEvent() {
+                if(!this.newEvent.location) return alert('請輸入地點');
+                
+                // 簡單排序時間
+                const newEvents = [...this.itinerary[this.activeDayIdx].events, { ...this.newEvent }];
+                newEvents.sort((a, b) => a.time.localeCompare(b.time));
+                
+                this.itinerary[this.activeDayIdx].events = newEvents;
+                
+                // Reset & Close
+                this.newEvent = { time: '', location: '', note: '' };
+                this.showEventModal = false;
+            },
+            deleteEvent(idx) {
+                if(confirm('確定刪除此行程？')) {
+                    this.itinerary[this.activeDayIdx].events.splice(idx, 1);
+                }
+            },
+            openMap(location) {
+                // 使用 Google Maps Deep Link
+                const query = encodeURIComponent(location);
+                window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+            },
+
+            // Expense Methods
+            submitExpense() {
+                if(!this.newExpense.title || !this.newExpense.amount) return alert('請輸入項目和金額');
+                
+                this.expenses.unshift({ ...this.newExpense });
+                
+                // Reset & Close
+                this.newExpense = { title: '', amount: '', payer: this.members[0] };
+                this.showExpenseModal = false;
+            },
+            deleteExpense(index) {
+                if(confirm('確定刪除此筆支出？')) {
+                    this.expenses.splice(index, 1);
+                }
+            },
+            addMember() {
+                if(this.newMemberName && !this.members.includes(this.newMemberName)) {
+                    this.members.push(this.newMemberName);
+                    this.newMemberName = '';
+                }
+            },
+            removeMember(index) {
+                if(confirm('刪除成員可能會影響舊帳務計算，確定嗎？')) {
+                    this.members.splice(index, 1);
+                }
+            },
+
+            // System
+            saveData() {
+                localStorage.setItem('tokyoTrip_data', JSON.stringify({
+                    itinerary: this.itinerary,
+                    expenses: this.expenses,
+                    members: this.members
+                }));
+            },
+            loadData() {
+                const data = localStorage.getItem('tokyoTrip_data');
+                if (data) {
+                    const parsed = JSON.parse(data);
+                    this.itinerary = parsed.itinerary || this.itinerary;
+                    this.expenses = parsed.expenses || [];
+                    this.members = parsed.members || ['我', '旅伴A'];
+                }
+            },
+            resetAllData() {
+                if(confirm('這將清空所有行程與帳務資料，確定重置？')) {
+                    localStorage.removeItem('tokyoTrip_data');
+                    location.reload();
+                }
+            }
+        }
+    }).mount('#app');
+</script>
+
+</body>
+</html>
