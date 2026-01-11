@@ -16,13 +16,13 @@
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .app-container { max-width: 480px; margin: 0 auto; background: #ffffff; min-height: 100vh; position: relative; padding-bottom: 110px; box-shadow: 0 0 30px rgba(160, 210, 210, 0.3); }
-        .day-tab { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .day-tab { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); min-width: 85px; }
         .kawaii-card { border-radius: 24px; border: 2px solid #e0f2f2; background: #fff; position: relative; overflow: hidden; }
         .kawaii-card::before { content: ""; position: absolute; top: 0; left: 0; width: 6px; height: 100%; background: #64cccc; }
-        @keyframes bounce-subtle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-        .weather-bounce { animation: bounce-subtle 2s infinite ease-in-out; }
         .bg-aqua { background-color: #64cccc; }
         .text-aqua { color: #4baaaa; }
+        @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .animate-slide-up { animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
     </style>
 </head>
 <body>
@@ -35,13 +35,14 @@
                 <div class="flex items-center mt-1 text-xs opacity-90">
                     <span class="mr-2"><i class="fa-solid fa-location-dot"></i> Tokyo</span>
                     <span v-if="weather" class="flex items-center font-bold">
-                        <i :class="getWeatherIcon(weather.code)" class="mr-1 weather-bounce"></i>
-                        {{ weather.temp }}°C
+                        <i :class="getWeatherIcon(weather.code)" class="mr-1"></i>{{ weather.temp }}°C
                     </span>
-                    <span v-else class="animate-pulse">Loading...</span>
                 </div>
             </div>
-            <button @click="resetData" class="bg-white/30 p-2 rounded-full"><i class="fa-solid fa-wand-sparkles"></i></button>
+            <div class="flex gap-2">
+                <button @click="showDateSettings = true" class="bg-white/30 p-2 rounded-full"><i class="fa-solid fa-calendar-day"></i></button>
+                <button @click="resetData" class="bg-white/30 p-2 rounded-full"><i class="fa-solid fa-wand-sparkles"></i></button>
+            </div>
         </div>
     </header>
 
@@ -49,73 +50,53 @@
         <div v-if="currentView === 'itinerary'">
             <div class="flex space-x-3 overflow-x-auto no-scrollbar mb-6 py-2 px-1">
                 <button v-for="(day, i) in itinerary" :key="i" @click="activeDayIdx = i"
-                    :class="activeDayIdx === i ? 'bg-[#64cccc] text-white scale-110 shadow-lg shadow-teal-100' : 'bg-white text-[#88babb] border-2 border-[#e0f2f2]'"
-                    class="day-tab px-6 py-3 rounded-2xl text-sm font-bold flex-shrink-0">
-                    Day {{ i + 1 }}
+                    :class="activeDayIdx === i ? 'bg-[#64cccc] text-white scale-105 shadow-lg shadow-teal-100' : 'bg-white text-[#88babb] border-2 border-[#e0f2f2]'"
+                    class="day-tab p-3 rounded-2xl flex flex-col items-center flex-shrink-0 transition-all">
+                    <span class="text-[10px] font-bold uppercase">{{ getDayOfWeek(i) }}</span>
+                    <span class="text-lg font-black tracking-tighter">{{ getDisplayDate(i) }}</span>
+                    <span class="text-[9px] opacity-70">Day {{ i + 1 }}</span>
                 </button>
-                <button @click="addDay" class="px-5 py-3 bg-[#e0f7f7] text-[#64cccc] rounded-2xl border-2 border-dashed border-[#64cccc] flex-shrink-0">
+                <button @click="addDay" class="p-4 bg-[#e0f7f7] text-[#64cccc] rounded-2xl border-2 border-dashed border-[#64cccc] flex-shrink-0 flex items-center justify-center min-w-[60px]">
                     <i class="fa-solid fa-plus"></i>
                 </button>
             </div>
 
             <div class="space-y-5">
                 <div v-if="itinerary[activeDayIdx].events.length === 0" class="text-center py-20">
-                    <img src="https://cdn-icons-png.flaticon.com/512/3085/3085330.png" class="w-32 mx-auto opacity-30 mb-4">
-                    <p class="text-[#88babb] text-sm font-medium">今天還沒有計劃呢～</p>
+                    <img src="https://cdn-icons-png.flaticon.com/512/3085/3085330.png" class="w-24 mx-auto opacity-20 mb-4">
+                    <p class="text-[#88babb] text-sm">今日未有安排，點擊下方新增行程吧！</p>
                 </div>
                 
                 <div v-for="(event, eIdx) in itinerary[activeDayIdx].events" :key="eIdx" class="kawaii-card p-5 shadow-sm">
                     <div class="flex justify-between items-start mb-2">
-                        <div class="flex items-center bg-[#f0f9f9] px-3 py-1 rounded-full border border-[#e0f2f2]">
+                        <div class="flex items-center bg-[#f0f9f9] px-3 py-1 rounded-full">
                             <i class="fa-regular fa-clock text-[#64cccc] text-xs mr-2"></i>
                             <span class="text-xs font-bold text-[#64cccc]">{{ event.time }}</span>
                         </div>
                         <div class="flex gap-4 text-[#88babb]">
-                            <i @click="openMap(event.location)" class="fa-solid fa-paper-plane hover:text-[#64cccc] cursor-pointer"></i>
-                            <i @click="deleteEvent(eIdx)" class="fa-solid fa-heart-crack hover:text-red-300 cursor-pointer"></i>
+                            <i @click="openMap(event.location)" class="fa-solid fa-location-dot hover:text-[#64cccc]"></i>
+                            <i @click="deleteEvent(eIdx)" class="fa-solid fa-trash-can hover:text-red-300"></i>
                         </div>
                     </div>
-                    <h3 class="text-lg font-bold text-[#2d5a5a] mb-1">{{ event.location }}</h3>
-                    <p class="text-sm text-[#88babb] leading-relaxed">{{ event.note }}</p>
-                    <img v-if="event.image" :src="event.image" class="img-preview mt-3 rounded-2xl border-2 border-[#f0f9f9]">
+                    <h3 class="text-lg font-bold text-[#2d5a5a]">{{ event.location }}</h3>
+                    <p class="text-sm text-[#88babb] mt-1 whitespace-pre-wrap">{{ event.note }}</p>
+                    <img v-if="event.image" :src="event.image" class="w-full h-40 object-cover mt-3 rounded-2xl border-2 border-[#f0f9f9]" @click="previewImg(event.image)">
                 </div>
             </div>
             
-            <button @click="showEventModal = true" class="fixed bottom-28 right-8 bg-[#64cccc] text-white w-15 h-15 p-4 rounded-full shadow-xl z-30 transform active:scale-90 transition-transform">
-                <i class="fa-solid fa-pen-nib text-xl"></i>
+            <button @click="showEventModal = true" class="fixed bottom-28 right-8 bg-[#64cccc] text-white w-14 h-14 rounded-full shadow-xl z-30 flex items-center justify-center">
+                <i class="fa-solid fa-pencil text-xl"></i>
             </button>
         </div>
 
         <div v-else-if="currentView === 'shopping'">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-bold border-b-4 border-[#64cccc]">買い物清單</h2>
-                <span class="text-[10px] font-bold bg-[#e0f7f7] text-[#64cccc] px-3 py-1 rounded-full uppercase tracking-tighter">Shopping List</span>
-            </div>
-            
-            <div class="space-y-3 mb-8">
-                <div v-for="(item, idx) in shoppingList" :key="idx" 
-                    class="flex items-center p-4 rounded-2xl bg-white border-2 border-[#f0f9f9] transition-all"
-                    :class="item.done ? 'opacity-50' : 'shadow-sm'"
-                    @click="item.done = !item.done">
-                    <div class="mr-4">
-                        <div v-if="item.done" class="w-6 h-6 bg-[#64cccc] rounded-full flex items-center justify-center text-white text-xs">
-                            <i class="fa-solid fa-check"></i>
-                        </div>
-                        <div v-else class="w-6 h-6 border-2 border-[#e0f2f2] rounded-full"></div>
-                    </div>
+            <h2 class="text-xl font-bold mb-4 border-b-4 border-[#64cccc] inline-block">買い物清單</h2>
+            <div class="space-y-2 mb-6">
+                <div v-for="(item, idx) in shoppingList" :key="idx" @click="item.done = !item.done"
+                    class="flex items-center p-4 rounded-2xl bg-white border-2 border-[#f0f9f9]" :class="{ 'opacity-50': item.done }">
+                    <i :class="item.done ? 'fa-solid fa-circle-check text-[#64cccc]' : 'fa-regular fa-circle text-[#e0f2f2]'" class="mr-3 text-lg"></i>
                     <span class="flex-1 font-bold text-sm" :class="{ 'line-through': item.done }">{{ item.name }}</span>
-                    <i @click.stop="shoppingList.splice(idx, 1)" class="fa-solid fa-xmark text-[#e0f2f2] hover:text-[#64cccc]"></i>
+                    <i @click.stop="shoppingList.splice(idx, 1)" class="fa-solid fa-xmark text-gray-200"></i>
                 </div>
             </div>
-
-            <div class="bg-[#f0f9f9] p-5 rounded-[2rem] border-2 border-dashed border-[#64cccc]">
-                <div class="flex gap-2">
-                    <input v-model="newItem.name" @keyup.enter="addShoppingItem" placeholder="想要買的東西..." class="flex-1 bg-white p-3 rounded-xl border-none text-sm outline-none shadow-inner">
-                    <button @click="addShoppingItem" class="bg-[#64cccc] text-white px-5 rounded-xl font-bold transition-colors active:bg-[#4baaaa]">追加</button>
-                </div>
-            </div>
-        </div>
-
-        <div v-else-if="currentView === 'expenses'">
-            <div class="bg-white border-4 border-[#64cccc] p-6 rounded-[2.5rem] shadow-sm mb-6 text-center">
-                <p class="text-[10px]
+            <div class="flex gap-2 p-4 bg-[#f0f9f9] rounded-2xl border-2 border-dashed border
