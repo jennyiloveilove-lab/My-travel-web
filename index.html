@@ -3,185 +3,149 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>旅日記 Pro V16 🌸</title>
+    <title>旅日記 Pro V17 🌸</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body { background-color: #f8fbfb; font-family: 'Zen Maru Gothic', sans-serif; color: #2d5a5a; -webkit-tap-highlight-color: transparent; }
+        body { background-color: #f8fbfb; font-family: 'Zen Maru Gothic', sans-serif; color: #2d5a5a; }
         .app-container { max-width: 480px; margin: 0 auto; background: #ffffff; min-height: 100vh; position: relative; padding-bottom: 120px; }
         .bg-aqua { background-color: #64cccc; }
-        .day-tab-active { background-color: white !important; color: #64cccc !important; box-shadow: 0 4px 15px rgba(100,204,204,0.2); }
-        .day-tab-normal { background-color: rgba(255,255,255,0.2) !important; color: white !important; }
-        .kawaii-card { border-radius: 28px; background: #fff; border: 1px solid #f0f7f7; box-shadow: 0 6px 20px rgba(0,0,0,0.03); }
-        .currency-toggle { background: #e0f2f2; border-radius: 12px; padding: 4px; display: flex; gap: 4px; }
-        .currency-btn { padding: 6px 12px; border-radius: 10px; font-size: 12px; font-weight: bold; transition: all 0.2s; }
-        .currency-active { background: #64cccc; color: white; shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
+        /* 參考截圖的圓角與陰影 */
+        .weather-box { background-color: rgba(255, 255, 255, 0.25); backdrop-filter: blur(5px); border-radius: 20px; padding: 12px 16px; }
+        .day-pill { background-color: white; border-radius: 18px; padding: 10px 20px; box-shadow: 0 4px 12px rgba(100,204,204,0.15); }
+        .event-card { border-radius: 25px; border: 1px solid #f0f7f7; box-shadow: 0 6px 15px rgba(0,0,0,0.03); overflow: hidden; position: relative; }
+        .category-chip { background: #f0f9f9; color: #64cccc; padding: 4px 12px; border-radius: 8px; font-size: 11px; font-weight: bold; }
+        .currency-btn { padding: 6px 14px; border-radius: 12px; font-size: 12px; font-weight: 800; transition: 0.2s; background: #e0f2f2; }
+        .currency-active { background: #64cccc; color: white; }
     </style>
 </head>
 <body>
 
 <div id="app" class="app-container">
-    <header class="bg-aqua text-white p-6 rounded-b-[3.5rem] shadow-lg sticky top-0 z-20">
-        <div class="flex justify-between items-start">
-            <div class="flex-1">
-                <h1 class="text-2xl font-bold flex items-center gap-2">
-                    {{ currentTime }} 
-                    <span class="text-[11px] bg-black/10 px-3 py-1 rounded-full font-normal">{{ currentLocationName }}</span>
-                </h1>
-                <p class="text-[10px] mt-2 opacity-90 font-bold"><i class="fa-solid fa-cloud-sun mr-1"></i>{{ travelTip }}</p>
+    <header class="bg-aqua text-white p-6 rounded-b-[3rem] shadow-lg sticky top-0 z-20">
+        <div class="flex justify-between items-center mb-4">
+            <div class="flex items-center gap-3">
+                <span class="text-2xl font-bold">{{ currentTime }}</span>
+                <span class="bg-white/30 px-3 py-1 rounded-full text-[11px]">{{ currentLocationName }}</span>
             </div>
-            <button @click="showSettings = true" class="bg-white/30 w-11 h-11 rounded-full flex items-center justify-center active:scale-90">
-                <i class="fa-solid fa-sliders"></i>
-            </button>
+            <button @click="showSettings = true" class="text-xl opacity-80 active:scale-90"><i class="fa-solid fa-calendar-day"></i></button>
         </div>
 
-        <div class="flex space-x-3 overflow-x-auto no-scrollbar mt-6 py-2">
-            <button v-for="(day, i) in itinerary" :key="i" @click="activeDayIdx = i"
-                :class="activeDayIdx === i ? 'day-tab-active' : 'day-tab-normal'"
-                class="px-4 py-3 rounded-2xl text-xs font-bold flex-shrink-0 flex flex-col items-center min-w-[100px] transition-all">
-                <span class="text-[9px] uppercase opacity-70">Day {{ i + 1 }}</span>
-                <span class="text-base font-bold">{{ getDisplayDate(i) }}</span>
-                <span class="text-[10px] font-normal">{{ getDayOfWeek(i) }}</span>
-            </button>
-            <button @click="addDay" class="px-6 py-3 bg-white/10 rounded-2xl border-2 border-dashed border-white/40"><i class="fa-solid fa-plus"></i></button>
+        <div class="weather-box flex items-center gap-3 mb-6">
+            <span class="text-2xl">☀️</span>
+            <div>
+                <p class="text-sm font-bold">{{ weatherTemp }}° C <span class="text-[10px] font-normal opacity-80">於當地</span></p>
+                <p class="text-[11px] opacity-90 font-medium">☀️ 天氣好正，適合行街！</p>
+            </div>
+        </div>
+
+        <div v-if="dailyTotalHKD > 0" class="bg-white/10 p-4 rounded-[20px] border border-white/20 flex justify-between items-center mb-4">
+            <div>
+                <p class="text-[9px] font-bold uppercase tracking-widest opacity-70">今日總開支 (HKD)</p>
+                <p class="text-xl font-black">$ {{ dailyTotalHKD.toFixed(1) }}</p>
+            </div>
+            <div class="text-right flex gap-2 overflow-x-auto no-scrollbar max-w-[150px]">
+                 <span v-for="stat in categoryStats" class="text-[10px] bg-white/20 px-2 py-1 rounded-lg whitespace-nowrap">
+                    {{ stat.emoji }} ${{ stat.totalHKD.toFixed(0) }}
+                 </span>
+            </div>
+        </div>
+
+        <div class="flex gap-3 overflow-x-auto no-scrollbar py-2">
+            <div v-for="(day, i) in itinerary" :key="i" @click="activeDayIdx = i"
+                :class="activeDayIdx === i ? 'day-pill text-[#64cccc]' : 'bg-white/20 text-white'"
+                class="flex-shrink-0 px-5 py-2 rounded-[18px] text-center min-w-[85px] cursor-pointer transition-all">
+                <p class="text-[9px] font-bold">{{ getDayOfWeek(i) }}</p>
+                <p class="text-sm font-bold">{{ getDisplayDate(i) }}</p>
+            </div>
+            <button @click="addDay" class="bg-white/10 px-4 rounded-[18px] border-2 border-dashed border-white/30">+</button>
         </div>
     </header>
 
-    <main class="p-5 space-y-8">
-        
-        <section v-if="dailyTotalHKD > 0" class="space-y-4">
-            <div class="flex items-center justify-between px-1">
-                <div class="flex items-center gap-2">
-                    <i class="fa-solid fa-wallet text-[#64cccc]"></i>
-                    <h2 class="font-bold text-lg text-[#2d5a5a]">今日開支報表</h2>
-                </div>
-                <span class="text-[10px] text-gray-400 font-bold">RATE: {{ exchangeRate }}</span>
-            </div>
-            
-            <div class="bg-[#f0f9f9] rounded-[2.5rem] p-6 shadow-sm border border-[#64cccc]/10">
-                <div class="text-center mb-6">
-                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Total Expenses (HKD)</p>
-                    <p class="text-4xl font-black text-[#64cccc] tracking-tight">$ {{ dailyTotalHKD.toLocaleString(undefined, {minimumFractionDigits: 1}) }}</p>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div v-for="stat in categoryStats" :key="stat.name" class="bg-white/80 p-3 rounded-2xl shadow-sm">
-                        <div class="flex items-center justify-between mb-1">
-                            <span class="text-[10px] font-bold text-gray-400">{{ stat.emoji }} {{ stat.name }}</span>
-                        </div>
-                        <p class="text-sm font-black text-[#2d5a5a]">${{ stat.totalHKD.toFixed(1) }}</p>
+    <main class="p-5 space-y-6">
+        <div ref="sortableList" class="space-y-4">
+            <div v-for="(event, eIdx) in itinerary[activeDayIdx].events" :key="event.id" 
+                @click="openEditModal(eIdx)" class="event-card bg-white p-5 border-l-[6px]" :style="{ borderColor: getCategoryColor(event.category) }">
+                
+                <div class="flex justify-between items-start mb-2">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-gray-400">{{ event.time }}</span>
+                        <span class="category-chip">{{ getCategoryName(event.category) }}</span>
+                    </div>
+                    <div v-if="event.cost > 0" class="text-right">
+                        <p class="text-sm font-black text-rose-400">
+                            {{ event.currency === 'JPY' ? '¥' : 'HK$' }}{{ event.cost.toLocaleString() }}
+                        </p>
+                        <p class="text-[9px] text-gray-300 font-bold">折合 HK$ {{ getEventHKD(event).toFixed(1) }}</p>
                     </div>
                 </div>
-            </div>
-        </section>
 
-        <section class="space-y-4">
-            <div class="flex items-center gap-2 px-1">
-                <i class="fa-solid fa-calendar-check text-[#64cccc]"></i>
-                <h2 class="font-bold text-lg text-[#2d5a5a]">行程安排</h2>
-            </div>
-            
-            <div ref="sortableList" class="space-y-5">
-                <div v-for="(event, eIdx) in itinerary[activeDayIdx].events" :key="event.id" 
-                    class="kawaii-card p-5 relative border-l-[10px]" :style="{ borderColor: getCategoryColor(event.category) }"
-                    @click="openEditModal(eIdx)">
-                    
-                    <div class="flex justify-between items-start mb-3">
-                        <div class="flex items-center gap-2">
-                            <span class="text-[10px] font-black bg-[#f0f9f9] text-[#64cccc] px-3 py-1 rounded-lg">{{ event.time }}</span>
-                            <span class="text-sm font-bold">{{ getCategoryEmoji(event.category) }}</span>
-                        </div>
-                        <div v-if="event.cost > 0" class="text-right">
-                            <p class="text-sm font-black text-rose-400">
-                                {{ event.currency === 'JPY' ? '¥' : '$' }}{{ event.cost.toLocaleString() }}
-                            </p>
-                            <p class="text-[9px] text-gray-300 font-bold">≈ HK$ {{ getEventHKD(event).toFixed(1) }}</p>
-                        </div>
-                    </div>
-
-                    <h3 class="font-bold text-[#2d5a5a] text-xl mb-1">{{ event.location }}</h3>
-                    <p v-if="event.note" class="text-xs text-gray-400 italic mb-3">{{ event.note }}</p>
-
-                    <div class="flex justify-end pt-2 border-t border-gray-50">
-                        <button @click.stop="openGoogleMap(event.location)" class="bg-[#64cccc]/10 text-[#64cccc] px-4 py-2 rounded-full text-[10px] font-black tracking-widest">
-                            <i class="fa-solid fa-map-location-dot mr-1"></i> 導航
-                        </button>
-                    </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-xl">{{ getCategoryEmoji(event.category) }}</span>
+                    <h3 class="text-lg font-bold text-[#2d5a5a]">{{ event.location }}</h3>
                 </div>
+                
+                <p v-if="event.note" class="text-xs text-gray-400 mt-2 italic">"{{ event.note }}"</p>
             </div>
-        </section>
+        </div>
+
+        <div v-if="itinerary[activeDayIdx].events.length === 0" class="text-center py-20">
+            <p class="text-gray-300 text-sm">今日仲未有行程，撳 + 加一個啦！</p>
+        </div>
     </main>
 
-    <button @click="addNewEvent" class="fixed bottom-8 right-8 bg-[#64cccc] text-white w-16 h-16 rounded-full shadow-2xl z-30 flex items-center justify-center text-3xl active:scale-90 transition-all">
+    <button @click="addNewEvent" class="fixed bottom-10 right-8 bg-[#64cccc] text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center text-2xl active:scale-90 transition-all">
         <i class="fa-solid fa-plus"></i>
     </button>
 
-    <div v-if="showSettings" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-8">
-        <div class="bg-white w-full max-w-xs rounded-[2.5rem] p-8 shadow-2xl">
-            <h3 class="font-bold text-xl text-center mb-6">⚙️ 系統設定</h3>
-            <div class="space-y-4">
-                <div>
-                    <label class="text-[10px] font-bold text-gray-400 uppercase">出發日期</label>
-                    <input v-model="startDate" type="date" class="w-full p-4 bg-[#f0f9f9] rounded-2xl font-bold mt-1">
-                </div>
-                <div>
-                    <label class="text-[10px] font-bold text-gray-400 uppercase">匯率 (1 JPY 兌 HKD)</label>
-                    <input v-model.number="exchangeRate" type="number" step="0.001" class="w-full p-4 bg-[#f0f9f9] rounded-2xl font-bold mt-1">
-                </div>
-            </div>
-            <button @click="showSettings = false; saveToLocal();" class="w-full bg-[#64cccc] text-white py-4 rounded-2xl font-bold mt-8 shadow-lg">更新數據</button>
-        </div>
-    </div>
-
-    <div v-if="showEditModal" class="fixed inset-0 bg-black/50 z-[90] flex items-end">
-        <div class="bg-white w-full rounded-t-[3rem] p-8 max-h-[92vh] overflow-y-auto no-scrollbar shadow-2xl">
+    <div v-if="showEditModal" class="fixed inset-0 bg-black/50 z-[100] flex items-end">
+        <div class="bg-white w-full rounded-t-[3rem] p-8 max-h-[90vh] overflow-y-auto shadow-2xl">
             <div class="flex justify-between items-center mb-6">
-                <h3 class="font-bold text-2xl text-[#2d5a5a]">{{ isNew ? '✨ 新增行程' : '📝 編輯內容' }}</h3>
-                <i @click="showEditModal = false" class="fa-solid fa-xmark text-gray-300 text-2xl"></i>
+                <h3 class="font-bold text-xl">✨ {{ isNew ? '新增行程' : '編輯行程' }}</h3>
+                <button @click="showEditModal = false"><i class="fa-solid fa-xmark text-gray-300 text-xl"></i></button>
             </div>
-            
+
             <div class="space-y-6">
-                <div class="flex gap-2 overflow-x-auto no-scrollbar">
+                <div class="flex gap-2 overflow-x-auto no-scrollbar py-1">
                     <button v-for="cat in categories" :key="cat.id" @click="editingEvent.category = cat.id"
                         :class="editingEvent.category === cat.id ? 'bg-[#64cccc] text-white' : 'bg-[#f0f9f9] text-gray-400'"
-                        class="px-5 py-3 rounded-2xl text-xs font-bold flex-shrink-0 flex flex-col items-center min-w-[75px] transition-all">
+                        class="px-5 py-3 rounded-2xl text-xs font-bold flex-shrink-0 flex flex-col items-center min-w-[70px]">
                         <span class="text-xl mb-1">{{ cat.emoji }}</span>{{ cat.name }}
                     </button>
                 </div>
 
                 <div class="flex gap-3">
-                    <input v-model="editingEvent.time" type="time" class="p-4 bg-[#f0f9f9] rounded-2xl flex-1 outline-none text-lg">
-                    <input v-model="editingEvent.location" type="text" placeholder="目的地" class="p-4 bg-[#f0f9f9] rounded-2xl flex-[2.5] font-bold outline-none">
+                    <input v-model="editingEvent.time" type="time" class="p-4 bg-[#f0f9f9] rounded-2xl flex-1 font-bold">
+                    <input v-model="editingEvent.location" type="text" placeholder="去邊度？" class="p-4 bg-[#f0f9f9] rounded-2xl flex-[2.5] font-bold outline-none">
                 </div>
-                
+
                 <textarea v-model="editingEvent.note" placeholder="備註..." class="w-full p-5 bg-[#f0f9f9] rounded-2xl h-24 text-sm outline-none resize-none"></textarea>
-                
+
                 <div class="bg-[#f0f9f9] p-6 rounded-[2rem]">
                     <div class="flex justify-between items-center mb-4">
-                        <span class="text-xs font-bold text-[#64cccc]">記帳貨幣</span>
-                        <div class="currency-toggle">
+                        <span class="text-xs font-bold text-[#64cccc]">輸入貨幣</span>
+                        <div class="flex gap-2">
                             <button @click="editingEvent.currency = 'JPY'" :class="editingEvent.currency === 'JPY' ? 'currency-active' : ''" class="currency-btn">JPY ¥</button>
                             <button @click="editingEvent.currency = 'HKD'" :class="editingEvent.currency === 'HKD' ? 'currency-active' : ''" class="currency-btn">HKD $</button>
                         </div>
                     </div>
                     <div class="flex items-center">
-                        <span class="text-2xl font-black mr-4 text-[#64cccc]">{{ editingEvent.currency === 'JPY' ? '¥' : '$' }}</span>
-                        <input v-model.number="editingEvent.cost" type="number" placeholder="0" class="bg-transparent flex-1 outline-none font-bold text-3xl">
+                        <span class="text-xl font-black mr-3 text-[#64cccc]">{{ editingEvent.currency === 'JPY' ? '¥' : '$' }}</span>
+                        <input v-model.number="editingEvent.cost" type="number" class="bg-transparent flex-1 outline-none font-bold text-2xl" placeholder="0">
                     </div>
-                    <div class="mt-4 pt-4 border-t border-white flex justify-between items-center">
-                        <span class="text-[10px] font-bold text-gray-400 uppercase">換算總計</span>
-                        <span class="text-sm font-black text-rose-400">≈ HKD ${{ getEventHKD(editingEvent).toFixed(1) }}</span>
+                    <div v-if="editingEvent.currency === 'JPY'" class="mt-3 pt-3 border-t border-white flex justify-between">
+                        <span class="text-[10px] text-gray-400 font-bold uppercase">折合港幣</span>
+                        <span class="text-xs font-black text-rose-400">≈ HK$ {{ (editingEvent.cost * exchangeRate).toFixed(1) }}</span>
                     </div>
                 </div>
             </div>
 
             <div class="flex gap-4 mt-8">
-                <button v-if="!isNew" @click="deleteEvent" class="flex-1 py-4 text-rose-400 font-bold bg-rose-50 rounded-2xl">刪除</button>
-                <button @click="saveEvent" class="flex-[2.5] bg-[#64cccc] text-white py-4 rounded-2xl font-bold shadow-lg">儲存行程</button>
+                <button v-if="!isNew" @click="deleteEvent" class="flex-1 py-4 text-rose-400 font-bold">刪除</button>
+                <button @click="saveEvent" class="flex-[3] bg-[#64cccc] text-white py-4 rounded-2xl font-bold shadow-lg">儲存</button>
             </div>
         </div>
     </div>
@@ -194,22 +158,19 @@ createApp({
         return {
             activeDayIdx: 0,
             showEditModal: false,
-            showSettings: false,
-            isNew: false,
+            isNew: true,
             editingIdx: -1,
-            currentTime: '',
-            currentLocationName: '正在定位...',
-            lat: 35.6895, lon: 139.6917,
-            startDate: new Date().toISOString().substr(0, 10),
+            currentTime: '23:37',
+            currentLocationName: '東京',
+            weatherTemp: 13,
             exchangeRate: 0.052,
-            weather: null,
+            startDate: '2026-01-11',
             itinerary: [{ events: [] }],
             categories: [
                 { id: 'spot', name: '景點', emoji: '🌸', color: '#64cccc' },
                 { id: 'eat', name: '飲食', emoji: '🍱', color: '#ffb347' },
                 { id: 'shop', name: '購物', emoji: '🛍️', color: '#f4a460' },
-                { id: 'transport', name: '交通', emoji: '🚃', color: '#88babb' },
-                { id: 'flex', name: '彈性', emoji: '🎈', color: '#d3d3d3' }
+                { id: 'transport', name: '交通', emoji: '🚃', color: '#88babb' }
             ],
             editingEvent: { id: 0, time: '12:00', location: '', cost: 0, note: '', currency: 'JPY', category: 'spot' }
         }
@@ -219,37 +180,17 @@ createApp({
             if (!event.cost) return 0;
             return event.currency === 'JPY' ? event.cost * this.exchangeRate : event.cost;
         },
-        async getLocation() {
-            if (!navigator.geolocation) return;
-            navigator.geolocation.getCurrentPosition(async (pos) => {
-                this.lat = pos.coords.latitude; this.lon = pos.coords.longitude;
-                try {
-                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${this.lat}&lon=${this.lon}&accept-language=zh-HK`);
-                    const data = await res.json();
-                    this.currentLocationName = data.address.suburb || data.address.city || "當前位置";
-                } catch (e) {}
-                this.fetchWeather();
-            });
-        },
-        async fetchWeather() {
-            try {
-                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${this.lat}&longitude=${this.lon}&current_weather=true`);
-                const data = await res.json();
-                this.weather = { temp: Math.round(data.current_weather.temperature), code: data.current_weather.weathercode };
-            } catch(e) {}
-        },
-        openGoogleMap(loc) { window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`, '_blank'); },
-        getCategoryEmoji(id) { return this.categories.find(c => c.id === id)?.emoji || '📍'; },
-        getCategoryColor(id) { return this.categories.find(c => c.id === id)?.color || '#64cccc'; },
         getDisplayDate(i) {
-            const d = new Date(this.startDate);
-            d.setDate(d.getDate() + i);
-            return `${(d.getMonth() + 1).toString().padStart(2,'0')}/${d.getDate().toString().padStart(2,'0')}`;
+            const d = new Date(this.startDate); d.setDate(d.getDate() + i);
+            return `${d.getMonth() + 1}/${d.getDate()}`;
         },
         getDayOfWeek(i) {
             const d = new Date(this.startDate); d.setDate(d.getDate() + i);
             return ['週日','週一','週二','週三','週四','週五','週六'][d.getDay()];
         },
+        getCategoryEmoji(id) { return this.categories.find(c => c.id === id)?.emoji || '📍'; },
+        getCategoryName(id) { return this.categories.find(c => c.id === id)?.name || '行程'; },
+        getCategoryColor(id) { return this.categories.find(c => c.id === id)?.color || '#64cccc'; },
         addNewEvent() {
             this.isNew = true;
             this.editingEvent = { id: Date.now(), time: '12:00', location: '', cost: 0, note: '', currency: 'JPY', category: 'spot' };
@@ -268,13 +209,10 @@ createApp({
             this.showEditModal = false; this.saveToLocal();
         },
         deleteEvent() {
-            if(confirm('確定刪除？')) { this.itinerary[this.activeDayIdx].events.splice(this.editingIdx, 1); this.showEditModal = false; this.saveToLocal(); }
+            if(confirm('刪除呢個行程？')) { this.itinerary[this.activeDayIdx].events.splice(this.editingIdx, 1); this.showEditModal = false; this.saveToLocal(); }
         },
-        addDay() { this.itinerary.push({ events: [] }); this.activeDayIdx = this.itinerary.length - 1; this.saveToLocal(); },
-        updateTime() {
-            this.currentTime = new Date().toLocaleTimeString('zh-HK', { hour12: false, hour: '2-digit', minute: '2-digit' });
-        },
-        saveToLocal() { localStorage.setItem('travel_pro_v16', JSON.stringify({ i: this.itinerary, s: this.startDate, r: this.exchangeRate })); }
+        addDay() { this.itinerary.push({ events: [] }); this.saveToLocal(); },
+        saveToLocal() { localStorage.setItem('travel_v17', JSON.stringify({ i: this.itinerary, s: this.startDate })); }
     },
     computed: {
         dailyTotalHKD() {
@@ -287,22 +225,12 @@ createApp({
                     .reduce((sum, e) => sum + this.getEventHKD(e), 0);
                 return { ...cat, totalHKD };
             }).filter(s => s.totalHKD > 0);
-        },
-        travelTip() { 
-            if(!this.weather) return "正在準備旅程...";
-            return this.weather.code < 4 ? "天氣不錯，適合戶外行程！" : "預計有雨，記得帶把傘。";
         }
     },
     mounted() {
-        const saved = JSON.parse(localStorage.getItem('travel_pro_v16'));
-        if(saved) { this.itinerary = saved.i; this.startDate = saved.s; this.exchangeRate = saved.r || 0.052; }
-        this.updateTime(); setInterval(this.updateTime, 10000); this.getLocation();
-        Sortable.create(this.$refs.sortableList, { animation: 200, delay: 200, delayOnTouchOnly: true, onEnd: (evt) => {
-            const curr = this.itinerary[this.activeDayIdx].events;
-            const item = curr.splice(evt.oldIndex, 1)[0];
-            curr.splice(evt.newIndex, 0, item);
-            this.saveToLocal();
-        }});
+        const saved = JSON.parse(localStorage.getItem('travel_v17'));
+        if(saved) { this.itinerary = saved.i; this.startDate = saved.s; }
+        Sortable.create(this.$refs.sortableList, { animation: 200, onEnd: () => this.saveToLocal() });
     }
 }).mount('#app');
 </script>
