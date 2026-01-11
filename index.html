@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>旅日記 Pro V15 🌸</title>
+    <title>旅日記 Pro V16 🌸</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
@@ -16,7 +16,9 @@
         .day-tab-active { background-color: white !important; color: #64cccc !important; box-shadow: 0 4px 15px rgba(100,204,204,0.2); }
         .day-tab-normal { background-color: rgba(255,255,255,0.2) !important; color: white !important; }
         .kawaii-card { border-radius: 28px; background: #fff; border: 1px solid #f0f7f7; box-shadow: 0 6px 20px rgba(0,0,0,0.03); }
-        .expense-badge { background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); color: white; }
+        .currency-toggle { background: #e0f2f2; border-radius: 12px; padding: 4px; display: flex; gap: 4px; }
+        .currency-btn { padding: 6px 12px; border-radius: 10px; font-size: 12px; font-weight: bold; transition: all 0.2s; }
+        .currency-active { background: #64cccc; color: white; shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
@@ -30,10 +32,10 @@
                     {{ currentTime }} 
                     <span class="text-[11px] bg-black/10 px-3 py-1 rounded-full font-normal">{{ currentLocationName }}</span>
                 </h1>
-                <p class="text-[10px] mt-2 opacity-90 font-bold"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>{{ travelTip }}</p>
+                <p class="text-[10px] mt-2 opacity-90 font-bold"><i class="fa-solid fa-cloud-sun mr-1"></i>{{ travelTip }}</p>
             </div>
-            <button @click="showSettings = true" class="bg-white/30 w-11 h-11 rounded-full flex items-center justify-center active:scale-90 shadow-inner">
-                <i class="fa-solid fa-gear"></i>
+            <button @click="showSettings = true" class="bg-white/30 w-11 h-11 rounded-full flex items-center justify-center active:scale-90">
+                <i class="fa-solid fa-sliders"></i>
             </button>
         </div>
 
@@ -41,9 +43,9 @@
             <button v-for="(day, i) in itinerary" :key="i" @click="activeDayIdx = i"
                 :class="activeDayIdx === i ? 'day-tab-active' : 'day-tab-normal'"
                 class="px-4 py-3 rounded-2xl text-xs font-bold flex-shrink-0 flex flex-col items-center min-w-[100px] transition-all">
-                <span class="text-[9px] uppercase opacity-70 mb-0.5">Day {{ i + 1 }}</span>
-                <span class="text-base">{{ getDisplayDate(i) }}</span>
-                <span class="text-[10px] font-normal opacity-80">{{ getDayOfWeek(i) }}</span>
+                <span class="text-[9px] uppercase opacity-70">Day {{ i + 1 }}</span>
+                <span class="text-base font-bold">{{ getDisplayDate(i) }}</span>
+                <span class="text-[10px] font-normal">{{ getDayOfWeek(i) }}</span>
             </button>
             <button @click="addDay" class="px-6 py-3 bg-white/10 rounded-2xl border-2 border-dashed border-white/40"><i class="fa-solid fa-plus"></i></button>
         </div>
@@ -51,28 +53,27 @@
 
     <main class="p-5 space-y-8">
         
-        <section v-if="itinerary[activeDayIdx].events.some(e => e.cost > 0)" class="space-y-4">
-            <div class="flex items-center gap-2 px-1">
-                <i class="fa-solid fa-chart-pie text-[#64cccc]"></i>
-                <h2 class="font-bold text-lg text-[#2d5a5a]">每日開支報表</h2>
+        <section v-if="dailyTotalHKD > 0" class="space-y-4">
+            <div class="flex items-center justify-between px-1">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-[#64cccc]"></i>
+                    <h2 class="font-bold text-lg text-[#2d5a5a]">今日開支報表</h2>
+                </div>
+                <span class="text-[10px] text-gray-400 font-bold">RATE: {{ exchangeRate }}</span>
             </div>
             
-            <div class="bg-[#f0f9f9] rounded-[2.5rem] p-6 space-y-6">
-                <div class="flex justify-between items-end border-b border-[#64cccc]/20 pb-4">
-                    <div>
-                        <p class="text-[10px] text-gray-400 font-bold uppercase">Today's Total</p>
-                        <p class="text-3xl font-black text-[#64cccc]">¥ {{ dailyTotal.toLocaleString() }}</p>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-[10px] text-gray-400 font-bold uppercase">HKD Reference</p>
-                        <p class="text-xl font-bold text-rose-400">≈ ${{ (dailyTotal * exchangeRate).toFixed(0) }}</p>
-                    </div>
+            <div class="bg-[#f0f9f9] rounded-[2.5rem] p-6 shadow-sm border border-[#64cccc]/10">
+                <div class="text-center mb-6">
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Total Expenses (HKD)</p>
+                    <p class="text-4xl font-black text-[#64cccc] tracking-tight">$ {{ dailyTotalHKD.toLocaleString(undefined, {minimumFractionDigits: 1}) }}</p>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
-                    <div v-for="stat in categoryStats" :key="stat.name" class="bg-white/60 p-3 rounded-2xl flex items-center justify-between">
-                        <span class="text-xs">{{ stat.emoji }} {{ stat.name }}</span>
-                        <span class="text-xs font-bold">¥{{ stat.total }}</span>
+                    <div v-for="stat in categoryStats" :key="stat.name" class="bg-white/80 p-3 rounded-2xl shadow-sm">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-[10px] font-bold text-gray-400">{{ stat.emoji }} {{ stat.name }}</span>
+                        </div>
+                        <p class="text-sm font-black text-[#2d5a5a]">${{ stat.totalHKD.toFixed(1) }}</p>
                     </div>
                 </div>
             </div>
@@ -80,7 +81,7 @@
 
         <section class="space-y-4">
             <div class="flex items-center gap-2 px-1">
-                <i class="fa-solid fa-route text-[#64cccc]"></i>
+                <i class="fa-solid fa-calendar-check text-[#64cccc]"></i>
                 <h2 class="font-bold text-lg text-[#2d5a5a]">行程安排</h2>
             </div>
             
@@ -89,23 +90,25 @@
                     class="kawaii-card p-5 relative border-l-[10px]" :style="{ borderColor: getCategoryColor(event.category) }"
                     @click="openEditModal(eIdx)">
                     
-                    <div class="flex justify-between items-start mb-2">
+                    <div class="flex justify-between items-start mb-3">
                         <div class="flex items-center gap-2">
                             <span class="text-[10px] font-black bg-[#f0f9f9] text-[#64cccc] px-3 py-1 rounded-lg">{{ event.time }}</span>
                             <span class="text-sm font-bold">{{ getCategoryEmoji(event.category) }}</span>
                         </div>
                         <div v-if="event.cost > 0" class="text-right">
-                            <span class="text-sm font-bold text-rose-400">¥{{ event.cost.toLocaleString() }}</span>
+                            <p class="text-sm font-black text-rose-400">
+                                {{ event.currency === 'JPY' ? '¥' : '$' }}{{ event.cost.toLocaleString() }}
+                            </p>
+                            <p class="text-[9px] text-gray-300 font-bold">≈ HK$ {{ getEventHKD(event).toFixed(1) }}</p>
                         </div>
                     </div>
 
-                    <h3 class="font-bold text-[#2d5a5a] text-xl">{{ event.location }}</h3>
-                    <img v-if="event.image" :src="event.image" class="w-full aspect-video object-cover rounded-2xl mt-3">
+                    <h3 class="font-bold text-[#2d5a5a] text-xl mb-1">{{ event.location }}</h3>
+                    <p v-if="event.note" class="text-xs text-gray-400 italic mb-3">{{ event.note }}</p>
 
-                    <div class="flex justify-between items-center mt-4">
-                        <p class="text-xs text-gray-400 italic flex-1 line-clamp-1 mr-4">{{ event.note || '冇備註' }}</p>
-                        <button @click.stop="openGoogleMap(event.location)" class="bg-[#64cccc]/10 text-[#64cccc] px-4 py-2 rounded-full text-[10px] font-black">
-                            <i class="fa-solid fa-location-arrow mr-1"></i> MAP
+                    <div class="flex justify-end pt-2 border-t border-gray-50">
+                        <button @click.stop="openGoogleMap(event.location)" class="bg-[#64cccc]/10 text-[#64cccc] px-4 py-2 rounded-full text-[10px] font-black tracking-widest">
+                            <i class="fa-solid fa-map-location-dot mr-1"></i> 導航
                         </button>
                     </div>
                 </div>
@@ -113,36 +116,36 @@
         </section>
     </main>
 
-    <button @click="addNewEvent" class="fixed bottom-10 right-8 bg-[#64cccc] text-white w-16 h-16 rounded-full shadow-2xl z-30 flex items-center justify-center text-3xl active:scale-90 transition-all">
+    <button @click="addNewEvent" class="fixed bottom-8 right-8 bg-[#64cccc] text-white w-16 h-16 rounded-full shadow-2xl z-30 flex items-center justify-center text-3xl active:scale-90 transition-all">
         <i class="fa-solid fa-plus"></i>
     </button>
 
     <div v-if="showSettings" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-8">
         <div class="bg-white w-full max-w-xs rounded-[2.5rem] p-8 shadow-2xl">
-            <h3 class="font-bold text-xl text-center mb-6">⚙️ 旅行設定</h3>
+            <h3 class="font-bold text-xl text-center mb-6">⚙️ 系統設定</h3>
             <div class="space-y-4">
                 <div>
-                    <label class="text-[10px] font-bold text-gray-400 uppercase ml-2">首日日期</label>
-                    <input v-model="startDate" type="date" class="w-full p-4 bg-[#f0f9f9] rounded-2xl font-bold">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase">出發日期</label>
+                    <input v-model="startDate" type="date" class="w-full p-4 bg-[#f0f9f9] rounded-2xl font-bold mt-1">
                 </div>
                 <div>
-                    <label class="text-[10px] font-bold text-gray-400 uppercase ml-2">匯率 (1 JPY 兌 HKD)</label>
-                    <input v-model.number="exchangeRate" type="number" step="0.001" class="w-full p-4 bg-[#f0f9f9] rounded-2xl font-bold">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase">匯率 (1 JPY 兌 HKD)</label>
+                    <input v-model.number="exchangeRate" type="number" step="0.001" class="w-full p-4 bg-[#f0f9f9] rounded-2xl font-bold mt-1">
                 </div>
             </div>
-            <button @click="showSettings = false; saveToLocal();" class="w-full bg-[#64cccc] text-white py-4 rounded-2xl font-bold mt-8 shadow-lg">儲存並返回</button>
+            <button @click="showSettings = false; saveToLocal();" class="w-full bg-[#64cccc] text-white py-4 rounded-2xl font-bold mt-8 shadow-lg">更新數據</button>
         </div>
     </div>
 
     <div v-if="showEditModal" class="fixed inset-0 bg-black/50 z-[90] flex items-end">
         <div class="bg-white w-full rounded-t-[3rem] p-8 max-h-[92vh] overflow-y-auto no-scrollbar shadow-2xl">
             <div class="flex justify-between items-center mb-6">
-                <h3 class="font-bold text-2xl text-[#2d5a5a]">{{ isNew ? '✨ 新行程' : '📝 編輯' }}</h3>
-                <i @click="showEditModal = false" class="fa-solid fa-xmark text-gray-300 text-2xl p-2"></i>
+                <h3 class="font-bold text-2xl text-[#2d5a5a]">{{ isNew ? '✨ 新增行程' : '📝 編輯內容' }}</h3>
+                <i @click="showEditModal = false" class="fa-solid fa-xmark text-gray-300 text-2xl"></i>
             </div>
             
-            <div class="space-y-5">
-                <div class="flex gap-2 overflow-x-auto no-scrollbar py-2">
+            <div class="space-y-6">
+                <div class="flex gap-2 overflow-x-auto no-scrollbar">
                     <button v-for="cat in categories" :key="cat.id" @click="editingEvent.category = cat.id"
                         :class="editingEvent.category === cat.id ? 'bg-[#64cccc] text-white' : 'bg-[#f0f9f9] text-gray-400'"
                         class="px-5 py-3 rounded-2xl text-xs font-bold flex-shrink-0 flex flex-col items-center min-w-[75px] transition-all">
@@ -152,31 +155,28 @@
 
                 <div class="flex gap-3">
                     <input v-model="editingEvent.time" type="time" class="p-4 bg-[#f0f9f9] rounded-2xl flex-1 outline-none text-lg">
-                    <input v-model="editingEvent.location" type="text" placeholder="去邊度？" class="p-4 bg-[#f0f9f9] rounded-2xl flex-[2.5] font-bold outline-none">
+                    <input v-model="editingEvent.location" type="text" placeholder="目的地" class="p-4 bg-[#f0f9f9] rounded-2xl flex-[2.5] font-bold outline-none">
                 </div>
                 
                 <textarea v-model="editingEvent.note" placeholder="備註..." class="w-full p-5 bg-[#f0f9f9] rounded-2xl h-24 text-sm outline-none resize-none"></textarea>
                 
-                <div class="bg-[#f0f9f9] p-5 rounded-3xl">
+                <div class="bg-[#f0f9f9] p-6 rounded-[2rem]">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-xs font-bold text-[#64cccc]">記帳貨幣</span>
+                        <div class="currency-toggle">
+                            <button @click="editingEvent.currency = 'JPY'" :class="editingEvent.currency === 'JPY' ? 'currency-active' : ''" class="currency-btn">JPY ¥</button>
+                            <button @click="editingEvent.currency = 'HKD'" :class="editingEvent.currency === 'HKD' ? 'currency-active' : ''" class="currency-btn">HKD $</button>
+                        </div>
+                    </div>
                     <div class="flex items-center">
-                        <span class="text-[#64cccc] font-black mr-4 text-xl">¥</span>
-                        <input v-model.number="editingEvent.cost" type="number" placeholder="日圓開支" class="bg-transparent flex-1 outline-none font-bold text-2xl">
+                        <span class="text-2xl font-black mr-4 text-[#64cccc]">{{ editingEvent.currency === 'JPY' ? '¥' : '$' }}</span>
+                        <input v-model.number="editingEvent.cost" type="number" placeholder="0" class="bg-transparent flex-1 outline-none font-bold text-3xl">
                     </div>
-                    <div class="mt-2 text-xs text-gray-400 font-bold border-t border-white pt-2 flex justify-between">
-                        <span>換算港幣</span>
-                        <span class="text-rose-400">≈ HK$ {{ (editingEvent.cost * exchangeRate).toFixed(1) }}</span>
+                    <div class="mt-4 pt-4 border-t border-white flex justify-between items-center">
+                        <span class="text-[10px] font-bold text-gray-400 uppercase">換算總計</span>
+                        <span class="text-sm font-black text-rose-400">≈ HKD ${{ getEventHKD(editingEvent).toFixed(1) }}</span>
                     </div>
                 </div>
-
-                <div v-if="editingEvent.image" class="relative">
-                    <img :src="editingEvent.image" class="w-full rounded-2xl shadow-md">
-                    <button @click="editingEvent.image = null" class="absolute top-4 right-4 bg-black/60 text-white w-9 h-9 rounded-full flex items-center justify-center"><i class="fa-solid fa-trash-can text-sm"></i></button>
-                </div>
-                <label v-else class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-[#64cccc] rounded-[2rem] bg-[#f0f9f9] cursor-pointer active:scale-95 transition-all">
-                    <i class="fa-solid fa-camera text-[#64cccc] text-2xl mb-2"></i>
-                    <span class="text-[10px] font-black text-[#64cccc] uppercase">加入相片 / 影相</span>
-                    <input type="file" @change="uploadPhoto" class="hidden" accept="image/*">
-                </label>
             </div>
 
             <div class="flex gap-4 mt-8">
@@ -198,7 +198,7 @@ createApp({
             isNew: false,
             editingIdx: -1,
             currentTime: '',
-            currentLocationName: '東京',
+            currentLocationName: '正在定位...',
             lat: 35.6895, lon: 139.6917,
             startDate: new Date().toISOString().substr(0, 10),
             exchangeRate: 0.052,
@@ -211,10 +211,14 @@ createApp({
                 { id: 'transport', name: '交通', emoji: '🚃', color: '#88babb' },
                 { id: 'flex', name: '彈性', emoji: '🎈', color: '#d3d3d3' }
             ],
-            editingEvent: { id: 0, time: '12:00', location: '', cost: 0, note: '', image: null, category: 'spot' }
+            editingEvent: { id: 0, time: '12:00', location: '', cost: 0, note: '', currency: 'JPY', category: 'spot' }
         }
     },
     methods: {
+        getEventHKD(event) {
+            if (!event.cost) return 0;
+            return event.currency === 'JPY' ? event.cost * this.exchangeRate : event.cost;
+        },
         async getLocation() {
             if (!navigator.geolocation) return;
             navigator.geolocation.getCurrentPosition(async (pos) => {
@@ -228,17 +232,13 @@ createApp({
             });
         },
         async fetchWeather() {
-            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${this.lat}&longitude=${this.lon}&current_weather=true`);
-            const data = await res.json();
-            this.weather = { temp: Math.round(data.current_weather.temperature), code: data.current_weather.weathercode };
+            try {
+                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${this.lat}&longitude=${this.lon}&current_weather=true`);
+                const data = await res.json();
+                this.weather = { temp: Math.round(data.current_weather.temperature), code: data.current_weather.weathercode };
+            } catch(e) {}
         },
         openGoogleMap(loc) { window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`, '_blank'); },
-        uploadPhoto(e) {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onload = (f) => { this.editingEvent.image = f.target.result; };
-            reader.readAsDataURL(file);
-        },
         getCategoryEmoji(id) { return this.categories.find(c => c.id === id)?.emoji || '📍'; },
         getCategoryColor(id) { return this.categories.find(c => c.id === id)?.color || '#64cccc'; },
         getDisplayDate(i) {
@@ -252,7 +252,7 @@ createApp({
         },
         addNewEvent() {
             this.isNew = true;
-            this.editingEvent = { id: Date.now(), time: '12:00', location: '', cost: 0, note: '', image: null, category: 'spot' };
+            this.editingEvent = { id: Date.now(), time: '12:00', location: '', cost: 0, note: '', currency: 'JPY', category: 'spot' };
             this.showEditModal = true;
         },
         openEditModal(idx) {
@@ -274,25 +274,27 @@ createApp({
         updateTime() {
             this.currentTime = new Date().toLocaleTimeString('zh-HK', { hour12: false, hour: '2-digit', minute: '2-digit' });
         },
-        saveToLocal() { localStorage.setItem('travel_pro_v15', JSON.stringify({ i: this.itinerary, s: this.startDate, r: this.exchangeRate })); }
+        saveToLocal() { localStorage.setItem('travel_pro_v16', JSON.stringify({ i: this.itinerary, s: this.startDate, r: this.exchangeRate })); }
     },
     computed: {
-        dailyTotal() { return this.itinerary[this.activeDayIdx].events.reduce((sum, e) => sum + (Number(e.cost) || 0), 0); },
+        dailyTotalHKD() {
+            return this.itinerary[this.activeDayIdx].events.reduce((sum, e) => sum + this.getEventHKD(e), 0);
+        },
         categoryStats() {
             return this.categories.map(cat => {
-                const total = this.itinerary[this.activeDayIdx].events
+                const totalHKD = this.itinerary[this.activeDayIdx].events
                     .filter(e => e.category === cat.id)
-                    .reduce((sum, e) => sum + (Number(e.cost) || 0), 0);
-                return { ...cat, total };
-            }).filter(s => s.total > 0);
+                    .reduce((sum, e) => sum + this.getEventHKD(e), 0);
+                return { ...cat, totalHKD };
+            }).filter(s => s.totalHKD > 0);
         },
         travelTip() { 
             if(!this.weather) return "正在準備旅程...";
-            return this.weather.code < 4 ? "天氣清爽，適合影相！" : "會有雨，建議室內行程。";
+            return this.weather.code < 4 ? "天氣不錯，適合戶外行程！" : "預計有雨，記得帶把傘。";
         }
     },
     mounted() {
-        const saved = JSON.parse(localStorage.getItem('travel_pro_v15'));
+        const saved = JSON.parse(localStorage.getItem('travel_pro_v16'));
         if(saved) { this.itinerary = saved.i; this.startDate = saved.s; this.exchangeRate = saved.r || 0.052; }
         this.updateTime(); setInterval(this.updateTime, 10000); this.getLocation();
         Sortable.create(this.$refs.sortableList, { animation: 200, delay: 200, delayOnTouchOnly: true, onEnd: (evt) => {
