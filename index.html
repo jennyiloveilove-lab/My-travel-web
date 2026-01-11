@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>旅日記 Pro V19 🏨</title>
+    <title>旅日記 Pro V21 完整版 🌸</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
@@ -11,18 +11,21 @@
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body { background-color: #f8fbfb; font-family: 'Zen Maru Gothic', sans-serif; color: #2d5a5a; overflow-x: hidden; }
-        .app-container { max-width: 480px; margin: 0 auto; background: #ffffff; min-height: 100vh; position: relative; padding-bottom: 100px; }
+        .app-container { max-width: 480px; margin: 0 auto; background: #ffffff; min-height: 100vh; position: relative; padding-bottom: 110px; }
         .bg-aqua { background-color: #64cccc; }
         .weather-box { background: rgba(255, 255, 255, 0.25); backdrop-filter: blur(8px); border-radius: 20px; padding: 12px 16px; }
         .event-card { border-radius: 28px; background: white; border: 1px solid #f0f7f7; box-shadow: 0 8px 20px rgba(0,0,0,0.03); }
         .bottom-nav { position: fixed; bottom: 0; width: 100%; max-width: 480px; background: white; display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #f0f0f0; z-index: 50; }
         .nav-btn { color: #ccc; font-size: 20px; transition: 0.3s; }
         .nav-btn.active { color: #64cccc; }
-        .currency-btn { padding: 6px 15px; border-radius: 12px; font-weight: bold; background: #f0f9f9; color: #64cccc; font-size: 12px; }
-        .currency-active { background: #64cccc; color: white; }
+        .currency-active { background: #64cccc !important; color: white !important; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         
-        /* 報表 Popup 動畫 */
+        /* 圖片上傳樣式 */
+        .photo-upload-zone { border: 2px dashed #64cccc; border-radius: 2rem; background: #f0f9f9; padding: 20px; cursor: pointer; position: relative; min-height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
+        .photo-preview { width: 100%; height: 180px; object-fit: cover; border-radius: 1.5rem; }
+
+        /* 動畫 */
         .modal-enter-active, .modal-leave-active { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
         .modal-enter-from, .modal-leave-to { opacity: 0; transform: translateY(100%); }
     </style>
@@ -37,15 +40,15 @@
                 <span class="bg-white/30 px-3 py-1 rounded-full text-[10px] font-bold">{{ currentLocationName }}</span>
             </div>
             <button @click="showSettings = true" class="bg-white/20 w-10 h-10 rounded-full flex items-center justify-center">
-                <i class="fa-solid fa-sliders"></i>
+                <i class="fa-solid fa-sliders text-sm"></i>
             </button>
         </div>
 
         <div class="weather-box flex items-center gap-3 mb-6">
             <span class="text-2xl">☀️</span>
             <div>
-                <p class="text-sm font-bold">{{ weatherTemp }}° C <span class="opacity-70 font-normal">於當地</span></p>
-                <p class="text-[11px] opacity-90 font-medium">☀️ 天氣唔錯，適合出門！</p>
+                <p class="text-sm font-bold">{{ weatherTemp }}° C <span class="opacity-70">於當地</span></p>
+                <p class="text-[11px] opacity-90">☀️ 天氣唔錯，適合出門！</p>
             </div>
         </div>
 
@@ -62,7 +65,7 @@
     </header>
 
     <main class="p-6 space-y-6">
-        <div class="flex items-center gap-2 mb-2">
+        <div class="flex items-center gap-2">
             <i class="fa-solid fa-calendar-day text-[#64cccc]"></i>
             <h2 class="font-bold text-lg text-[#2d5a5a]">行程安排</h2>
         </div>
@@ -78,16 +81,17 @@
                     </div>
                     <div v-if="event.cost > 0" class="text-right">
                         <span class="text-sm font-black text-rose-400">{{ event.currency === 'JPY' ? '¥' : '$' }}{{ event.cost.toLocaleString() }}</span>
-                        <p class="text-[8px] text-gray-300">≈ HKD {{ getEventHKD(event).toFixed(1) }}</p>
                     </div>
                 </div>
-                <h3 class="text-xl font-bold text-[#2d5a5a]">{{ event.location }}</h3>
-                <p v-if="event.note" class="text-xs text-gray-400 mt-2 font-medium">"{{ event.note }}"</p>
+                <h3 class="text-lg font-bold text-[#2d5a5a]">{{ event.location }}</h3>
+                <p v-if="event.note" class="text-xs text-gray-400 mt-1">{{ event.note }}</p>
+                
+                <img v-if="event.image" :src="event.image" class="w-full h-40 object-cover rounded-2xl mt-4 shadow-sm">
             </div>
         </div>
-
-        <div v-if="itinerary[activeDayIdx].events.length === 0" class="text-center py-20 opacity-30">
-            <p class="text-sm">今日暫時冇行程喎，撳右下角「+」加返啦！</p>
+        
+        <div v-if="itinerary[activeDayIdx].events.length === 0" class="text-center py-20 opacity-20 italic">
+            今日仲未有行程...
         </div>
     </main>
 
@@ -106,34 +110,35 @@
             <div @click="showExpenseReport = false" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
             <div class="bg-white w-full rounded-t-[3rem] p-8 shadow-2xl relative max-h-[85vh] overflow-y-auto no-scrollbar">
                 <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6"></div>
-                
-                <div class="flex justify-between items-center mb-8">
-                    <h3 class="text-2xl font-black text-[#2d5a5a]">今日開支報表 📊</h3>
-                    <button @click="showExpenseReport = false" class="text-gray-300 text-2xl"><i class="fa-solid fa-xmark"></i></button>
-                </div>
+                <h3 class="text-2xl font-black mb-8 text-[#2d5a5a]">開支總結 📊</h3>
 
-                <div class="bg-[#f0f9f9] rounded-[2.5rem] p-8 text-center mb-8 border border-[#64cccc]/10">
-                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Total Expenses (HKD)</p>
-                    <h4 class="text-5xl font-black text-[#64cccc] tracking-tighter">$ {{ dailyTotalHKD.toLocaleString(undefined, {minimumFractionDigits: 1}) }}</h4>
+                <div class="grid grid-cols-1 gap-4 mb-8">
+                    <div class="bg-[#f0f9f9] rounded-[2.5rem] p-6 text-center border border-[#64cccc]/20">
+                        <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">今日開支 (Day {{ activeDayIdx + 1 }})</p>
+                        <h4 class="text-4xl font-black text-[#64cccc] tracking-tighter">$ {{ dailyTotalHKD.toFixed(1) }}</h4>
+                    </div>
+                    <div class="bg-[#64cccc] rounded-[2.5rem] p-6 text-center text-white shadow-lg shadow-[#64cccc]/20">
+                        <p class="text-[10px] font-bold opacity-80 uppercase tracking-widest mb-1">成個行程總開支</p>
+                        <h4 class="text-4xl font-black tracking-tighter">$ {{ tripTotalHKD.toFixed(1) }}</h4>
+                    </div>
                 </div>
 
                 <div class="space-y-4">
+                    <p class="font-bold text-sm px-2 text-[#2d5a5a]">今日分類細項：</p>
                     <div v-for="stat in categoryStats" :key="stat.name" class="flex justify-between items-center bg-gray-50 p-5 rounded-2xl">
                         <div class="flex items-center gap-3">
                             <span class="text-2xl">{{ stat.emoji }}</span>
                             <span class="font-bold">{{ stat.name }}</span>
                         </div>
-                        <span class="font-black text-[#2d5a5a]">$ {{ stat.totalHKD.toFixed(1) }}</span>
+                        <span class="font-black text-rose-400">$ {{ stat.totalHKD.toFixed(1) }}</span>
                     </div>
                 </div>
-                
-                <div v-if="dailyTotalHKD === 0" class="text-center py-10 text-gray-300 italic">今日仲未有任何開支。</div>
             </div>
         </div>
     </transition>
 
     <div v-if="showEditModal" class="fixed inset-0 bg-black/50 z-[110] flex items-end">
-        <div class="bg-white w-full rounded-t-[3rem] p-8 max-h-[90vh] overflow-y-auto shadow-2xl no-scrollbar">
+        <div class="bg-white w-full rounded-t-[3rem] p-8 max-h-[95vh] overflow-y-auto shadow-2xl no-scrollbar">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="font-bold text-xl text-[#2d5a5a]">{{ isNew ? '✨ 新增行程' : '📝 編輯行程' }}</h3>
                 <button @click="showEditModal = false"><i class="fa-solid fa-xmark text-gray-300 text-xl"></i></button>
@@ -142,7 +147,7 @@
             <div class="space-y-6">
                 <div class="flex gap-2 overflow-x-auto no-scrollbar py-1">
                     <button v-for="cat in categories" :key="cat.id" @click="editingEvent.category = cat.id"
-                        :class="editingEvent.category === cat.id ? 'bg-[#64cccc] text-white shadow-lg shadow-[#64cccc]/30' : 'bg-gray-50 text-gray-400'"
+                        :class="editingEvent.category === cat.id ? 'bg-[#64cccc] text-white' : 'bg-gray-50 text-gray-400'"
                         class="px-5 py-4 rounded-2xl flex flex-col items-center min-w-[75px] transition-all">
                         <span class="text-2xl mb-1">{{ cat.emoji }}</span>
                         <span class="text-[10px] font-bold">{{ cat.name }}</span>
@@ -150,52 +155,61 @@
                 </div>
 
                 <div class="flex gap-3">
-                    <input v-model="editingEvent.time" type="time" class="p-4 bg-gray-50 rounded-2xl flex-1 font-bold outline-none border-none">
-                    <input v-model="editingEvent.location" type="text" placeholder="目的地 / 酒店名稱" class="p-4 bg-gray-50 rounded-2xl flex-[2.5] font-bold outline-none border-none">
+                    <input v-model="editingEvent.time" type="time" class="p-4 bg-gray-50 rounded-2xl flex-1 font-bold outline-none">
+                    <input v-model="editingEvent.location" type="text" placeholder="目的地 / 酒店" class="p-4 bg-gray-50 rounded-2xl flex-[2.5] font-bold outline-none">
                 </div>
 
-                <textarea v-model="editingEvent.note" placeholder="備註..." class="w-full p-5 bg-gray-50 rounded-2xl h-24 text-sm outline-none resize-none"></textarea>
+                <textarea v-model="editingEvent.note" placeholder="備註或細節..." class="w-full p-5 bg-gray-50 rounded-2xl h-24 text-sm outline-none resize-none"></textarea>
 
                 <div class="bg-[#f0f9f9] p-6 rounded-[2.5rem]">
                     <div class="flex justify-between items-center mb-4">
-                        <span class="text-xs font-bold text-[#64cccc]">記帳貨幣</span>
-                        <div class="flex gap-2 bg-white/50 p-1 rounded-xl">
-                            <button @click="editingEvent.currency = 'JPY'" :class="editingEvent.currency === 'JPY' ? 'currency-active' : ''" class="currency-btn">JPY ¥</button>
-                            <button @click="editingEvent.currency = 'HKD'" :class="editingEvent.currency === 'HKD' ? 'currency-active' : ''" class="currency-btn">HKD $</button>
+                        <span class="text-xs font-bold text-[#64cccc]">輸入開支</span>
+                        <div class="flex gap-2">
+                            <button @click="editingEvent.currency = 'JPY'" :class="editingEvent.currency === 'JPY' ? 'currency-active' : 'bg-white text-gray-300'" class="px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all">JPY ¥</button>
+                            <button @click="editingEvent.currency = 'HKD'" :class="editingEvent.currency === 'HKD' ? 'currency-active' : 'bg-white text-gray-300'" class="px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all">HKD $</button>
                         </div>
                     </div>
                     <div class="flex items-center">
                         <span class="text-2xl font-black mr-3 text-[#64cccc]">{{ editingEvent.currency === 'JPY' ? '¥' : '$' }}</span>
-                        <input v-model.number="editingEvent.cost" type="number" class="bg-transparent flex-1 outline-none font-bold text-3xl" placeholder="0">
+                        <input v-model.number="editingEvent.cost" type="number" class="bg-transparent flex-1 outline-none font-bold text-3xl text-[#64cccc]" placeholder="0">
                     </div>
-                    <div v-if="editingEvent.currency === 'JPY' && editingEvent.cost > 0" class="mt-4 pt-4 border-t border-white flex justify-between">
-                        <span class="text-[10px] text-gray-400 font-bold uppercase">折合港幣</span>
-                        <span class="text-sm font-black text-rose-400">≈ HKD ${{ (editingEvent.cost * exchangeRate).toFixed(1) }}</span>
+                </div>
+
+                <div>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase mb-2">上傳圖片</p>
+                    <div @click="$refs.fileInput.click()" class="photo-upload-zone">
+                        <div v-if="!editingEvent.image" class="text-center">
+                            <i class="fa-solid fa-cloud-arrow-up text-[#64cccc] text-2xl mb-2"></i>
+                            <p class="text-[10px] font-bold text-[#64cccc]">選擇相片或拍攝</p>
+                        </div>
+                        <img v-else :src="editingEvent.image" class="photo-preview">
+                        <input type="file" ref="fileInput" @change="handleImageUpload" class="hidden" accept="image/*">
+                        <button v-if="editingEvent.image" @click.stop="editingEvent.image = ''" class="absolute top-4 right-4 bg-rose-500 text-white w-8 h-8 rounded-full shadow-lg">✕</button>
                     </div>
                 </div>
             </div>
 
             <div class="flex gap-4 mt-8">
                 <button v-if="!isNew" @click="deleteEvent" class="flex-1 py-4 text-rose-400 font-bold">刪除</button>
-                <button @click="saveEvent" class="flex-[3] bg-[#64cccc] text-white py-4 rounded-2xl font-bold shadow-lg">儲存行程</button>
+                <button @click="saveEvent" class="flex-[3] bg-[#64cccc] text-white py-4 rounded-2xl font-bold shadow-lg">完成並儲存</button>
             </div>
         </div>
     </div>
 
     <div v-if="showSettings" class="fixed inset-0 bg-black/50 z-[120] flex items-center justify-center p-8">
         <div class="bg-white w-full max-w-xs rounded-[2.5rem] p-8 shadow-2xl">
-            <h3 class="font-bold text-xl text-center mb-6">系統設定</h3>
+            <h3 class="font-bold text-xl text-center mb-6">旅程設定</h3>
             <div class="space-y-4">
                 <div>
-                    <label class="text-[10px] font-bold text-gray-400 uppercase">出發日期</label>
+                    <label class="text-[10px] font-bold text-gray-400 uppercase">出發首日</label>
                     <input v-model="startDate" type="date" class="w-full p-4 bg-gray-50 rounded-2xl font-bold mt-1">
                 </div>
                 <div>
-                    <label class="text-[10px] font-bold text-gray-400 uppercase">匯率 (1 JPY = ? HKD)</label>
+                    <label class="text-[10px] font-bold text-gray-400 uppercase">JPY 兌 HKD 匯率</label>
                     <input v-model.number="exchangeRate" type="number" step="0.001" class="w-full p-4 bg-gray-50 rounded-2xl font-bold mt-1">
                 </div>
             </div>
-            <button @click="showSettings = false; saveToLocal();" class="w-full bg-[#64cccc] text-white py-4 rounded-2xl font-bold mt-6">確定</button>
+            <button @click="showSettings = false; saveToLocal();" class="w-full bg-[#64cccc] text-white py-4 rounded-2xl font-bold mt-8 shadow-lg">確定</button>
         </div>
     </div>
 </div>
@@ -212,19 +226,19 @@ createApp({
             isNew: true,
             editingIdx: -1,
             currentTime: '00:00',
-            currentLocationName: '正在定位...',
-            weatherTemp: 13,
+            currentLocationName: '沙田區',
+            weatherTemp: 20,
             exchangeRate: 0.052,
-            startDate: new Date().toISOString().substr(0, 10),
+            startDate: '2026-01-11',
             itinerary: [{ events: [] }],
             categories: [
                 { id: 'spot', name: '景點', emoji: '🌸', color: '#64cccc' },
                 { id: 'eat', name: '飲食', emoji: '🍱', color: '#ffb347' },
                 { id: 'shop', name: '購物', emoji: '🛍️', color: '#f4a460' },
                 { id: 'transport', name: '交通', emoji: '🚃', color: '#88babb' },
-                { id: 'hotel', name: '酒店', emoji: '🏨', color: '#a29bfe' } // 新增酒店
+                { id: 'hotel', name: '酒店', emoji: '🏨', color: '#a29bfe' }
             ],
-            editingEvent: { id: 0, time: '12:00', location: '', cost: 0, note: '', currency: 'JPY', category: 'spot' }
+            editingEvent: { id: 0, time: '12:00', location: '', cost: 0, note: '', currency: 'JPY', category: 'spot', image: '' }
         }
     },
     methods: {
@@ -242,9 +256,17 @@ createApp({
         },
         getCategoryEmoji(id) { return this.categories.find(c => c.id === id)?.emoji || '📍'; },
         getCategoryColor(id) { return this.categories.find(c => c.id === id)?.color || '#64cccc'; },
+        handleImageUpload(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (f) => this.editingEvent.image = f.target.result;
+                reader.readAsDataURL(file);
+            }
+        },
         addNewEvent() {
             this.isNew = true;
-            this.editingEvent = { id: Date.now(), time: '12:00', location: '', cost: 0, note: '', currency: 'JPY', category: 'spot' };
+            this.editingEvent = { id: Date.now(), time: '12:00', location: '', cost: 0, note: '', currency: 'JPY', category: 'spot', image: '' };
             this.showEditModal = true;
         },
         openEditModal(idx) {
@@ -260,10 +282,10 @@ createApp({
             this.showEditModal = false; this.saveToLocal();
         },
         deleteEvent() {
-            if(confirm('確定刪除？')) { this.itinerary[this.activeDayIdx].events.splice(this.editingIdx, 1); this.showEditModal = false; this.saveToLocal(); }
+            if(confirm('確定刪除行程？')) { this.itinerary[this.activeDayIdx].events.splice(this.editingIdx, 1); this.showEditModal = false; this.saveToLocal(); }
         },
         addDay() { this.itinerary.push({ events: [] }); this.saveToLocal(); },
-        saveToLocal() { localStorage.setItem('travel_v19', JSON.stringify({ i: this.itinerary, s: this.startDate, r: this.exchangeRate })); },
+        saveToLocal() { localStorage.setItem('travel_v21', JSON.stringify({ i: this.itinerary, s: this.startDate, r: this.exchangeRate })); },
         updateTime() {
             const now = new Date();
             this.currentTime = now.toLocaleTimeString('zh-HK', { hour12: false, hour: '2-digit', minute: '2-digit' });
@@ -272,6 +294,11 @@ createApp({
     computed: {
         dailyTotalHKD() {
             return this.itinerary[this.activeDayIdx].events.reduce((sum, e) => sum + this.getEventHKD(e), 0);
+        },
+        tripTotalHKD() {
+            return this.itinerary.reduce((total, day) => {
+                return total + day.events.reduce((dSum, e) => dSum + this.getEventHKD(e), 0);
+            }, 0);
         },
         categoryStats() {
             return this.categories.map(cat => {
@@ -283,11 +310,10 @@ createApp({
         }
     },
     mounted() {
-        const saved = JSON.parse(localStorage.getItem('travel_v19'));
+        const saved = JSON.parse(localStorage.getItem('travel_v21'));
         if(saved) { this.itinerary = saved.i; this.startDate = saved.s; this.exchangeRate = saved.r || 0.052; }
         this.updateTime(); setInterval(this.updateTime, 10000);
         Sortable.create(this.$refs.sortableList, { animation: 200, onEnd: () => this.saveToLocal() });
-        this.currentLocationName = "沙田區"; // 預設或定位
     }
 }).mount('#app');
 </script>
