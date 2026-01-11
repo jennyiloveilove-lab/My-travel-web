@@ -11,12 +11,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body { background-color: #f0f9f9; font-family: 'Zen Maru Gothic', sans-serif; color: #2d5a5a; }
-        .app-container { max-width: 480px; margin: 0 auto; background: #ffffff; min-height: 100vh; position: relative; padding-bottom: 110px; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .app-container { max-width: 480px; margin: 0 auto; background: #ffffff; min-height: 100vh; position: relative; padding-bottom: 120px; }
         .bg-aqua { background-color: #64cccc; }
-        .day-tab-active { background-color: white !important; color: #64cccc !important; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .day-tab-normal { background-color: rgba(255,255,255,0.15) !important; color: white !important; }
-        .kawaii-card { border-radius: 20px; border: 2px solid #f0f9f9; background: #fff; position: relative; }
+        .day-tab-active { background-color: white !important; color: #64cccc !important; transform: scale(1.05); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .day-tab-normal { background-color: rgba(255,255,255,0.2) !important; color: white !important; }
+        .kawaii-card { border-radius: 20px; border: 2px solid #f5fbfb; background: #fff; overflow: hidden; }
+        .img-preview-container { width: 100%; aspect-ratio: 16/9; border-radius: 15px; margin-top: 10px; overflow: hidden; border: 1px solid #eee; }
+        .img-preview { width: 100%; height: 100%; object-fit: cover; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
         @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
         .animate-slide-up { animation: slide-up 0.3s ease-out; }
     </style>
@@ -27,34 +29,34 @@
     <header class="bg-aqua text-white p-6 rounded-b-[2.5rem] shadow-lg sticky top-0 z-20">
         <div class="flex justify-between items-start">
             <div>
-                <h1 class="text-xl font-bold">{{ currentTime }} <span class="text-xs opacity-70">{{ currentLocationName }}</span></h1>
-                <div class="flex items-center mt-2 text-sm bg-white/20 p-3 rounded-2xl backdrop-blur-sm">
+                <h1 class="text-xl font-bold flex items-center gap-2">
+                    {{ currentTime }} 
+                    <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">{{ currentLocationName }}</span>
+                </h1>
+                <div @click="getLocation" class="flex items-center mt-3 text-sm bg-white/20 p-3 rounded-2xl backdrop-blur-sm cursor-pointer active:opacity-60">
                     <i v-if="weather" :class="getWeatherIcon(weather.code)" class="text-xl mr-2"></i>
                     <div v-if="weather">
-                        <p class="font-bold">{{ weather.temp }}°C</p>
-                        <p class="text-[10px] leading-tight opacity-90">{{ travelTip }}</p>
+                        <p class="font-bold">{{ weather.temp }}°C <span class="text-[10px] font-normal opacity-80">於當地</span></p>
+                        <p class="text-[10px] opacity-90">{{ travelTip }}</p>
                     </div>
-                    <div v-else class="text-xs animate-pulse">正在獲取當地天氣...</div>
+                    <div v-else class="text-xs">
+                        <i class="fa-solid fa-location-dot animate-bounce mr-2"></i>點擊獲取定位與天氣
+                    </div>
                 </div>
             </div>
-            <div class="flex flex-col gap-2">
-                <button @click="getLocation" class="bg-white/30 p-2.5 rounded-full active:scale-90 transition-all text-center">
-                    <i class="fa-solid fa-location-crosshairs"></i>
-                </button>
-                <button @click="showDateSettings = true" class="bg-white/30 p-2.5 rounded-full active:scale-90 transition-all">
-                    <i class="fa-solid fa-calendar-alt"></i>
-                </button>
-            </div>
+            <button @click="showDateSettings = true" class="bg-white/30 p-3 rounded-full active:scale-90 transition-all">
+                <i class="fa-solid fa-calendar-alt"></i>
+            </button>
         </div>
 
         <div class="flex space-x-2 overflow-x-auto no-scrollbar mt-6 py-1">
             <button v-for="(day, i) in itinerary" :key="i" @click="activeDayIdx = i"
                 :class="activeDayIdx === i ? 'day-tab-active' : 'day-tab-normal'"
-                class="px-4 py-2 rounded-2xl text-xs font-bold flex-shrink-0 transition-all flex flex-col items-center min-w-[80px]">
-                <span class="text-[10px]">{{ getDayOfWeek(i) }}</span>
+                class="px-4 py-2 rounded-2xl text-xs font-bold flex-shrink-0 transition-all flex flex-col items-center min-w-[85px]">
+                <span class="text-[9px] opacity-70">{{ getDayOfWeek(i) }}</span>
                 <span class="text-base">{{ getDisplayDate(i) }}</span>
             </button>
-            <button @click="addDay" class="px-4 py-2 bg-white/10 rounded-2xl border-2 border-dashed border-white/30 flex-shrink-0">
+            <button @click="addDay" class="px-5 py-2 bg-white/10 rounded-2xl border-2 border-dashed border-white/30">
                 <i class="fa-solid fa-plus"></i>
             </button>
         </div>
@@ -63,41 +65,72 @@
     <main class="p-4">
         <div class="scroll-y-container" ref="sortableList">
             <div v-for="(event, eIdx) in itinerary[activeDayIdx].events" :key="event.id" 
-                class="kawaii-card p-5 mb-4 shadow-sm border-l-8 border-l-[#64cccc]"
+                class="kawaii-card p-5 mb-4 shadow-sm border-l-[6px] border-[#64cccc]"
                 @click="openEditModal(eIdx)">
                 <div class="flex justify-between items-start">
                     <span class="text-[10px] font-bold bg-teal-50 text-[#64cccc] px-2 py-1 rounded-md">{{ event.time }}</span>
-                    <span class="text-xs font-bold text-rose-400" v-if="event.cost > 0">¥{{ event.cost }}</span>
+                    <span v-if="event.cost > 0" class="text-xs font-bold text-rose-400">¥ {{ event.cost.toLocaleString() }}</span>
                 </div>
                 <h3 class="font-bold text-[#2d5a5a] text-lg mt-2">{{ event.location }}</h3>
-                <p v-if="event.note" class="text-xs text-[#88babb] mt-1 italic">{{ event.note }}</p>
+                <p v-if="event.note" class="text-xs text-[#88babb] mt-1">{{ event.note }}</p>
+                <div v-if="event.image" class="img-preview-container">
+                    <img :src="event.image" class="img-preview">
+                </div>
             </div>
         </div>
     </main>
 
-    <button @click="addNewEvent" class="fixed bottom-28 right-6 bg-[#64cccc] text-white w-14 h-14 rounded-full shadow-2xl z-30 flex items-center justify-center text-2xl">
+    <button @click="addNewEvent" class="fixed bottom-32 right-6 bg-[#64cccc] text-white w-14 h-14 rounded-full shadow-2xl z-30 flex items-center justify-center text-2xl active:scale-90 transition-all">
         <i class="fa-solid fa-plus"></i>
     </button>
 
-    <div v-if="showDateSettings" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
-        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl animate-slide-up">
-            <h3 class="font-bold text-xl text-[#2d5a5a] text-center mb-6">設定首日日期</h3>
+    <div v-if="showDateSettings" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
+        <div class="bg-white w-full max-w-xs rounded-[2.5rem] p-8 shadow-2xl animate-slide-up">
+            <h3 class="font-bold text-xl text-center mb-6">設定出發日期</h3>
             <input v-model="startDate" type="date" class="w-full p-4 bg-[#f0f9f9] rounded-2xl border-none outline-none font-bold text-center text-[#2d5a5a] mb-6">
-            <button @click="showDateSettings = false; saveToLocal();" class="w-full bg-[#64cccc] text-white py-4 rounded-2xl font-bold shadow-lg">確定</button>
+            <button @click="showDateSettings = false; saveToLocal();" class="w-full bg-[#64cccc] text-white py-4 rounded-2xl font-bold shadow-lg">確認日期</button>
         </div>
     </div>
 
     <div v-if="showEditModal" class="fixed inset-0 bg-black/50 z-[90] flex items-end">
-        <div class="bg-white w-full rounded-t-[3rem] p-8 animate-slide-up">
-            <div class="space-y-4">
-                <input v-model="editingEvent.time" type="time" class="p-4 bg-[#f0f9f9] rounded-2xl w-full">
-                <input v-model="editingEvent.location" type="text" placeholder="去邊度？" class="p-4 bg-[#f0f9f9] rounded-2xl w-full font-bold">
-                <textarea v-model="editingEvent.note" placeholder="筆記..." class="w-full p-4 bg-[#f0f9f9] rounded-2xl h-24 text-sm"></textarea>
-                <input v-model.number="editingEvent.cost" type="number" placeholder="金額 (JPY)" class="p-4 bg-[#f0f9f9] rounded-2xl w-full">
+        <div class="bg-white w-full rounded-t-[3rem] p-8 animate-slide-up max-h-[90vh] overflow-y-auto no-scrollbar">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="font-bold text-xl">{{ isNew ? '✨ 新增行程' : '📝 編輯行程' }}</h3>
+                <i @click="showEditModal = false" class="fa-solid fa-xmark text-gray-300 text-2xl cursor-pointer"></i>
             </div>
-            <div class="flex gap-3 mt-6">
-                <button v-if="!isNew" @click="deleteCurrentEvent" class="flex-1 py-4 text-rose-400 font-bold bg-rose-50 rounded-2xl">刪除</button>
-                <button @click="saveEdit" class="flex-[2] bg-[#64cccc] text-white py-4 rounded-2xl font-bold">儲存</button>
+            
+            <div class="space-y-4">
+                <div class="flex gap-2">
+                    <input v-model="editingEvent.time" type="time" class="p-4 bg-[#f0f9f9] rounded-2xl flex-1 text-sm outline-none">
+                    <input v-model="editingEvent.location" type="text" placeholder="去邊度？" class="p-4 bg-[#f0f9f9] rounded-2xl flex-[2] font-bold text-sm outline-none">
+                </div>
+                
+                <textarea v-model="editingEvent.note" placeholder="有咩要記低？" class="w-full p-4 bg-[#f0f9f9] rounded-2xl h-24 text-sm outline-none"></textarea>
+                
+                <div class="flex items-center bg-[#f0f9f9] p-4 rounded-2xl">
+                    <span class="text-[#88babb] font-bold mr-3">¥</span>
+                    <input v-model.number="editingEvent.cost" type="number" placeholder="花費金額" class="bg-transparent flex-1 outline-none font-bold text-sm">
+                </div>
+
+                <div class="pt-2">
+                    <label class="block text-[10px] font-bold text-[#88babb] uppercase mb-2 ml-1">行程相片</label>
+                    <div v-if="editingEvent.image" class="relative group">
+                        <img :src="editingEvent.image" class="img-preview-container img-preview">
+                        <button @click="editingEvent.image = null" class="absolute top-4 right-4 bg-black/50 text-white w-10 h-10 rounded-full backdrop-blur-sm">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                    <label v-else class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-[#64cccc] rounded-2xl bg-[#f0f9f9] cursor-pointer hover:bg-[#e6f4f4] transition-colors">
+                        <i class="fa-solid fa-camera text-2xl text-[#64cccc] mb-2"></i>
+                        <span class="text-xs text-[#64cccc] font-bold">加入相片 / 影相</span>
+                        <input type="file" @change="handleImageUpload" class="hidden" accept="image/*">
+                    </label>
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-8">
+                <button v-if="!isNew" @click="deleteCurrentEvent" class="flex-1 py-4 text-rose-400 font-bold bg-rose-50 rounded-2xl active:scale-95 transition-all">刪除</button>
+                <button @click="saveEdit" class="flex-[2] bg-[#64cccc] text-white py-4 rounded-2xl font-bold shadow-lg active:scale-95 transition-all">儲存行程</button>
             </div>
         </div>
     </div>
@@ -114,36 +147,137 @@ createApp({
             isNew: false,
             editingIdx: -1,
             currentTime: '',
-            currentLocationName: '正在定位...',
-            lat: 35.6895, // 預設東京
-            lon: 139.6917,
+            currentLocationName: '未定位',
+            lat: null, lon: null,
             startDate: new Date().toISOString().substr(0, 10),
             weather: null,
             itinerary: [{ events: [] }],
-            editingEvent: { id: 0, time: '12:00', location: '', cost: 0, note: '' }
+            editingEvent: { id: 0, time: '12:00', location: '', cost: 0, note: '', image: null }
         }
     },
     methods: {
-        // 核心功能：獲取目前位置
+        // 增強版定位功能
         getLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        this.lat = position.coords.latitude;
-                        this.lon = position.coords.longitude;
-                        this.currentLocationName = "目前位置";
-                        this.fetchWeather();
-                    },
-                    (error) => {
-                        console.error("定位失敗", error);
-                        this.currentLocationName = "東京 (預設)";
-                        this.fetchWeather();
-                    }
-                );
+            this.currentLocationName = "定位中...";
+            if (!navigator.geolocation) {
+                this.currentLocationName = "不支援定位";
+                this.lat = 35.6895; this.lon = 139.6917; // 預設東京
+                this.fetchWeather();
+                return;
             }
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    this.lat = pos.coords.latitude;
+                    this.lon = pos.coords.longitude;
+                    this.currentLocationName = "當前位置";
+                    this.fetchWeather();
+                },
+                (err) => {
+                    console.error(err);
+                    this.currentLocationName = "定位失敗";
+                    // 失敗時預設顯示東京天氣
+                    this.lat = 35.6895; this.lon = 139.6917;
+                    this.fetchWeather();
+                    alert("無法獲取位置。請確認是否開啟了 GPS 權限或使用 HTTPS 連線。");
+                },
+                { timeout: 8000 }
+            );
         },
         async fetchWeather() {
+            if (!this.lat) return;
             try {
                 const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${this.lat}&longitude=${this.lon}&current_weather=true`);
                 const data = await res.json();
-                this.weather = { temp: Math.round(data.current_weather.temperature), code: data.current_weather
+                this.weather = { temp: Math.round(data.current_weather.temperature), code: data.current_weather.weathercode };
+            } catch (e) { console.error("天氣獲取失敗"); }
+        },
+        updateTime() {
+            const now = new Date();
+            this.currentTime = now.toLocaleTimeString('zh-HK', { hour12: false, hour: '2-digit', minute: '2-digit' });
+        },
+        // 📸 處理圖片讀取
+        handleImageUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            // 檢查檔案大小 (建議限制在 2MB 以內，避免 localStorage 爆掉)
+            if (file.size > 2 * 1024 * 1024) {
+                alert("圖片太大喇！請選擇 2MB 以下嘅相片。");
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (f) => { this.editingEvent.image = f.target.result; };
+            reader.readAsDataURL(file);
+        },
+        getDisplayDate(i) {
+            const d = new Date(this.startDate);
+            d.setDate(d.getDate() + i);
+            return `${d.getMonth() + 1}/${d.getDate()}`;
+        },
+        getDayOfWeek(i) {
+            const d = new Date(this.startDate);
+            d.setDate(d.getDate() + i);
+            const days = ['週日','週一','週二','週三','週四','週五','週六'];
+            return days[d.getDay()];
+        },
+        getWeatherIcon(code) {
+            if(code === 0) return 'fa-solid fa-sun text-yellow-400';
+            if(code < 4) return 'fa-solid fa-cloud-sun text-gray-400';
+            return 'fa-solid fa-cloud-rain text-blue-300';
+        },
+        openEditModal(idx) {
+            this.isNew = false; this.editingIdx = idx;
+            this.editingEvent = JSON.parse(JSON.stringify(this.itinerary[this.activeDayIdx].events[idx]));
+            this.showEditModal = true;
+        },
+        addNewEvent() {
+            this.isNew = true;
+            this.editingEvent = { id: Date.now(), time: '12:00', location: '', cost: 0, note: '', image: null };
+            this.showEditModal = true;
+        },
+        saveEdit() {
+            if(!this.editingEvent.location) return;
+            if(this.isNew) this.itinerary[this.activeDayIdx].events.push({...this.editingEvent});
+            else this.itinerary[this.activeDayIdx].events[this.editingIdx] = {...this.editingEvent};
+            this.itinerary[this.activeDayIdx].events.sort((a,b) => a.time.localeCompare(b.time));
+            this.showEditModal = false; this.saveToLocal();
+        },
+        deleteCurrentEvent() {
+            if(confirm('確定刪除此行程？')) {
+                this.itinerary[this.activeDayIdx].events.splice(this.editingIdx, 1);
+                this.showEditModal = false; this.saveToLocal();
+            }
+        },
+        addDay() { this.itinerary.push({ events: [] }); this.activeDayIdx = this.itinerary.length - 1; this.saveToLocal(); },
+        saveToLocal() { 
+            try {
+                localStorage.setItem('travel_pro_v7', JSON.stringify({ i: this.itinerary, s: this.startDate })); 
+            } catch (e) {
+                alert("儲存空間不足（可能係相片太多），請刪除部分相片後再試。");
+            }
+        }
+    },
+    computed: {
+        travelTip() {
+            if (!this.weather) return "";
+            return this.weather.code < 4 ? "☀️ 天氣唔錯，啱晒出門！" : "☔ 帶返把遮，小心淋親。";
+        }
+    },
+    mounted() {
+        const saved = JSON.parse(localStorage.getItem('travel_pro_v7'));
+        if(saved) { this.itinerary = saved.i; this.startDate = saved.s; }
+        this.updateTime(); setInterval(this.updateTime, 10000); 
+        this.getLocation(); // 啟動時自動嘗試定位
+        Sortable.create(this.$refs.sortableList, {
+            animation: 200, delay: 200, delayOnTouchOnly: true,
+            onEnd: (evt) => {
+                const curr = this.itinerary[this.activeDayIdx].events;
+                const item = curr.splice(evt.oldIndex, 1)[0];
+                curr.splice(evt.newIndex, 0, item);
+                this.saveToLocal();
+            }
+        });
+    }
+}).mount('#app');
+</script>
+</body>
+</html>
