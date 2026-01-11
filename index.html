@@ -116,3 +116,179 @@
             
             <div class="space-y-5">
                 <div class="flex gap-2 overflow-x-auto no-scrollbar py-2">
+                    <button v-for="cat in categories" :key="cat.id" 
+                        @click="editingEvent.category = cat.id"
+                        :class="editingEvent.category === cat.id ? 'category-btn-active' : 'bg-[#f0f9f9] text-gray-400'"
+                        class="px-5 py-3 rounded-2xl text-xs font-bold flex-shrink-0 transition-all flex flex-col items-center min-w-[75px]">
+                        <span class="text-xl mb-1">{{ cat.emoji }}</span>
+                        {{ cat.name }}
+                    </button>
+                </div>
+
+                <div class="flex gap-3">
+                    <input v-model="editingEvent.time" type="time" class="p-4 bg-[#f0f9f9] rounded-2xl flex-1 outline-none text-lg">
+                    <input v-model="editingEvent.location" type="text" placeholder="目的地名稱" class="p-4 bg-[#f0f9f9] rounded-2xl flex-[2.5] font-bold outline-none">
+                </div>
+                
+                <textarea v-model="editingEvent.note" placeholder="有咩要留意？(如：幾點前要到、必買嘢食...)" class="w-full p-5 bg-[#f0f9f9] rounded-2xl h-24 text-sm outline-none resize-none"></textarea>
+                
+                <div class="flex items-center bg-[#f0f9f9] p-4 rounded-2xl">
+                    <span class="text-[#64cccc] font-black mr-3 text-lg">¥</span>
+                    <input v-model.number="editingEvent.cost" type="number" placeholder="預算金額" class="bg-transparent flex-1 outline-none font-bold">
+                </div>
+
+                <div v-if="editingEvent.image" class="relative">
+                    <img :src="editingEvent.image" class="img-box shadow-md">
+                    <button @click="editingEvent.image = null" class="absolute top-4 right-4 bg-black/60 text-white w-9 h-9 rounded-full flex items-center justify-center"><i class="fa-solid fa-trash-can text-sm"></i></button>
+                </div>
+                <label v-else class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-[#64cccc] rounded-[2rem] bg-[#f0f9f9] cursor-pointer active:bg-[#e6f4f4] transition-colors">
+                    <i class="fa-solid fa-camera text-[#64cccc] text-2xl mb-2"></i>
+                    <span class="text-xs text-[#64cccc] font-bold tracking-widest uppercase">相片 / 現場影相</span>
+                    <input type="file" @change="uploadPhoto" class="hidden" accept="image/*">
+                </label>
+            </div>
+
+            <div class="flex gap-4 mt-8">
+                <button v-if="!isNew" @click="deleteEvent" class="flex-1 py-4 text-rose-400 font-bold bg-rose-50 rounded-2xl">刪除</button>
+                <button @click="saveEvent" class="flex-[2.5] bg-[#64cccc] text-white py-4 rounded-2xl font-bold shadow-lg active:scale-95">儲存行程</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const { createApp } = Vue;
+createApp({
+    data() {
+        return {
+            activeDayIdx: 0,
+            showEditModal: false,
+            showDateSettings: false,
+            isNew: false,
+            editingIdx: -1,
+            currentTime: '',
+            currentLocationName: '正在定位...',
+            lat: 35.6895, lon: 139.6917,
+            startDate: new Date().toISOString().substr(0, 10),
+            weather: null,
+            itinerary: [{ events: [] }],
+            categories: [
+                { id: 'spot', name: '景點', emoji: '🌸', color: '#64cccc' },
+                { id: 'eat', name: '吃飯', emoji: '🍱', color: '#ffb347' },
+                { id: 'shop', name: '逛街', emoji: '🛍️', color: '#f4a460' },
+                { id: 'transport', name: '交通', emoji: '🚃', color: '#88babb' },
+                { id: 'flex', name: '彈性', emoji: '🎈', color: '#d3d3d3' }
+            ],
+            editingEvent: { id: 0, time: '12:00', location: '', cost: 0, note: '', image: null, category: 'spot' }
+        }
+    },
+    methods: {
+        confirmDate() {
+            this.showDateSettings = false;
+            this.saveToLocal();
+            this.$forceUpdate();
+        },
+        async getLocation() {
+            if (!navigator.geolocation) { this.currentLocationName = "東京"; return; }
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                this.lat = pos.coords.latitude;
+                this.lon = pos.coords.longitude;
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${this.lat}&lon=${this.lon}&accept-language=zh-HK`);
+                    const data = await res.json();
+                    this.currentLocationName = data.address.suburb || data.address.district || data.address.city || "當前位置";
+                } catch (e) { this.currentLocationName = "已定位"; }
+                this.fetchWeather();
+            }, () => { this.currentLocationName = "東京 (預設)"; this.fetchWeather(); });
+        },
+        async fetchWeather() {
+            try {
+                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${this.lat}&longitude=${this.lon}&current_weather=true`);
+                const data = await res.json();
+                this.weather = { temp: Math.round(data.current_weather.temperature), code: data.current_weather.weathercode };
+            } catch(e) {}
+        },
+        openGoogleMap(loc) {
+            if(!loc) return;
+            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`, '_blank');
+        },
+        uploadPhoto(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (f) => { this.editingEvent.image = f.target.result; };
+            reader.readAsDataURL(file);
+        },
+        getCategoryEmoji(id) { return this.categories.find(c => c.id === id)?.emoji || '📍'; },
+        getCategoryName(id) { return this.categories.find(c => c.id === id)?.name || '行程'; },
+        getCategoryColor(id) { return this.categories.find(c => c.id === id)?.color || '#64cccc'; },
+        getDisplayDate(i) {
+            const d = new Date(this.startDate);
+            d.setDate(d.getDate() + i);
+            return `${(d.getMonth() + 1).toString().padStart(2,'0')}/${d.getDate().toString().padStart(2,'0')}`;
+        },
+        getDayOfWeek(i) {
+            const d = new Date(this.startDate);
+            d.setDate(d.getDate() + i);
+            const days = ['週日','週一','週二','週三','週四','週五','週六'];
+            return days[d.getDay()];
+        },
+        getWeatherIcon(code) {
+            if(code === 0) return 'fa-solid fa-sun';
+            if(code < 4) return 'fa-solid fa-cloud-sun';
+            return 'fa-solid fa-cloud-rain';
+        },
+        addNewEvent() {
+            this.isNew = true;
+            this.editingEvent = { id: Date.now(), time: '12:00', location: '', cost: 0, note: '', image: null, category: 'spot' };
+            this.showEditModal = true;
+        },
+        openEditModal(idx) {
+            this.isNew = false; this.editingIdx = idx;
+            this.editingEvent = JSON.parse(JSON.stringify(this.itinerary[this.activeDayIdx].events[idx]));
+            this.showEditModal = true;
+        },
+        saveEvent() {
+            if(!this.editingEvent.location) return;
+            if(this.isNew) this.itinerary[this.activeDayIdx].events.push({...this.editingEvent});
+            else this.itinerary[this.activeDayIdx].events[this.editingIdx] = {...this.editingEvent};
+            this.itinerary[this.activeDayIdx].events.sort((a,b) => a.time.localeCompare(b.time));
+            this.showEditModal = false; this.saveToLocal();
+        },
+        deleteEvent() {
+            if(confirm('確定刪除？')) { this.itinerary[this.activeDayIdx].events.splice(this.editingIdx, 1); this.showEditModal = false; this.saveToLocal(); }
+        },
+        addDay() { this.itinerary.push({ events: [] }); this.activeDayIdx = this.itinerary.length - 1; this.saveToLocal(); },
+        updateTime() {
+            const now = new Date();
+            this.currentTime = now.toLocaleTimeString('zh-HK', { hour12: false, hour: '2-digit', minute: '2-digit' });
+        },
+        saveToLocal() { localStorage.setItem('travel_pro_v13', JSON.stringify({ i: this.itinerary, s: this.startDate })); }
+    },
+    computed: {
+        dailyTotal() { return this.itinerary[this.activeDayIdx].events.reduce((sum, e) => sum + (Number(e.cost) || 0), 0); },
+        travelTip() { 
+            if(!this.weather) return "";
+            if(this.weather.temp < 12) return "❄️ 幾凍吓，着多件衫！";
+            if(this.weather.code >= 4) return "☔ 會落雨，帶把遮。";
+            return "☀️ 天氣正，啱玩！";
+        }
+    },
+    mounted() {
+        const saved = JSON.parse(localStorage.getItem('travel_pro_v13'));
+        if(saved) { this.itinerary = saved.i; this.startDate = saved.s; }
+        this.updateTime(); setInterval(this.updateTime, 10000); this.getLocation();
+        Sortable.create(this.$refs.sortableList, { 
+            animation: 200, delay: 200, delayOnTouchOnly: true,
+            onEnd: (evt) => {
+                const curr = this.itinerary[this.activeDayIdx].events;
+                const item = curr.splice(evt.oldIndex, 1)[0];
+                curr.splice(evt.newIndex, 0, item);
+                this.saveToLocal();
+            }
+        });
+    }
+}).mount('#app');
+</script>
+</body>
+</html>
