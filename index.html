@@ -28,7 +28,7 @@
             <div>
                 <h1 class="text-2xl font-bold flex items-center gap-2">
                     {{ currentTime }} 
-                    <span class="text-[10px] bg-white/30 px-3 py-1 rounded-full font-normal">{{ currentLocationName }}</span>
+                    <span class="text-[10px] bg-white/30 px-3 py-1 rounded-full font-normal tracking-tight">{{ currentLocationName }}</span>
                 </h1>
                 <div @click="getLocation" class="flex items-center mt-3 text-sm bg-white/20 p-3 rounded-2xl backdrop-blur-md active:scale-95 transition-all">
                     <i v-if="weather" :class="getWeatherIcon(weather.code)" class="text-xl mr-2 text-yellow-200"></i>
@@ -36,7 +36,7 @@
                         <p class="font-bold text-base">{{ weather.temp }}°C</p>
                         <p class="text-[10px] opacity-90">{{ travelTip }}</p>
                     </div>
-                    <div v-else class="text-xs animate-pulse">獲取位置中...</div>
+                    <div v-else class="text-xs animate-pulse">定位中...</div>
                 </div>
             </div>
             <button @click="showDateSettings = true" class="bg-white/30 w-11 h-11 rounded-full flex items-center justify-center active:scale-90 shadow-inner">
@@ -44,7 +44,7 @@
             </button>
         </div>
 
-        <div class="flex space-x-3 overflow-x-auto no-scrollbar mt-6 py-2">
+        <div class="flex space-x-3 overflow-x-auto no-scrollbar mt-6 py-2 px-1">
             <button v-for="(day, i) in itinerary" :key="i" @click="activeDayIdx = i"
                 :class="activeDayIdx === i ? 'day-tab-active' : 'day-tab-normal'"
                 class="px-5 py-3 rounded-2xl text-xs font-bold flex-shrink-0 flex flex-col items-center min-w-[90px] transition-all">
@@ -65,9 +65,13 @@
                     <span v-if="event.cost > 0" class="text-sm font-bold text-rose-400">¥{{ event.cost }}</span>
                 </div>
                 <h3 class="font-bold text-[#2d5a5a] text-xl">{{ event.location }}</h3>
-                <p v-if="event.note" class="text-xs text-gray-400 mt-2 italic">{{ event.note }}</p>
-                <img v-if="event.image" :src="event.image" class="img-box">
+                <p v-if="event.note" class="text-xs text-gray-400 mt-2 italic line-clamp-2">"{{ event.note }}"</p>
+                <img v-if="event.image" :src="event.image" class="img-box shadow-sm">
             </div>
+        </div>
+        <div v-if="itinerary[activeDayIdx].events.length === 0" class="text-center py-20 text-gray-300">
+            <i class="fa-solid fa-map-pin text-4xl mb-3 opacity-20"></i>
+            <p class="text-sm italic">今日仲未有行程，撳 + 試吓影相加一個啦！</p>
         </div>
     </main>
 
@@ -76,42 +80,47 @@
     </button>
 
     <div v-if="showDateSettings" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-8">
-        <div class="bg-white w-full max-w-xs rounded-[2.5rem] p-8 shadow-2xl">
-            <h3 class="font-bold text-xl text-center mb-6">設定首日日期</h3>
-            <input v-model="startDate" type="date" class="w-full p-4 bg-[#f0f9f9] rounded-2xl outline-none font-bold text-center text-[#2d5a5a] mb-6 border-none">
-            <button @click="confirmDate" class="w-full bg-[#64cccc] text-white py-4 rounded-2xl font-bold shadow-lg active:scale-95">確定</button>
+        <div class="bg-white w-full max-w-xs rounded-[2.5rem] p-8 shadow-2xl scale-100 transition-transform">
+            <h3 class="font-bold text-xl text-center mb-6 text-[#2d5a5a]">🗓️ 設定首日日期</h3>
+            <div class="bg-[#f0f9f9] rounded-2xl p-2 mb-6">
+                <input v-model="startDate" type="date" class="w-full p-4 bg-transparent outline-none font-bold text-center text-[#2d5a5a] text-lg">
+            </div>
+            <button @click="confirmDate" class="w-full bg-[#64cccc] text-white py-4 rounded-2xl font-bold shadow-lg active:scale-95 transition-all">確定設定</button>
+            <button @click="showDateSettings = false" class="w-full text-gray-400 py-3 mt-2 text-sm">取消</button>
         </div>
     </div>
 
     <div v-if="showEditModal" class="fixed inset-0 bg-black/50 z-[90] flex items-end">
-        <div class="bg-white w-full rounded-t-[3rem] p-8 max-h-[90vh] overflow-y-auto no-scrollbar shadow-2xl">
+        <div class="bg-white w-full rounded-t-[3rem] p-8 max-h-[92vh] overflow-y-auto no-scrollbar shadow-2xl">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="font-bold text-2xl text-[#2d5a5a]">{{ isNew ? '✨ 新增行程' : '📝 編輯行程' }}</h3>
                 <i @click="showEditModal = false" class="fa-solid fa-xmark text-gray-300 text-2xl p-2"></i>
             </div>
-            <div class="space-y-4">
+            <div class="space-y-5">
                 <div class="flex gap-3">
                     <input v-model="editingEvent.time" type="time" class="p-4 bg-[#f0f9f9] rounded-2xl flex-1 outline-none text-lg">
-                    <input v-model="editingEvent.location" type="text" placeholder="去邊度？" class="p-4 bg-[#f0f9f9] rounded-2xl flex-[2] font-bold outline-none">
+                    <input v-model="editingEvent.location" type="text" placeholder="去邊度？" class="p-4 bg-[#f0f9f9] rounded-2xl flex-[2.5] font-bold outline-none">
                 </div>
-                <textarea v-model="editingEvent.note" placeholder="有咩要記低？" class="w-full p-4 bg-[#f0f9f9] rounded-2xl h-24 text-sm outline-none resize-none"></textarea>
+                <textarea v-model="editingEvent.note" placeholder="有咩要記低？" class="w-full p-5 bg-[#f0f9f9] rounded-2xl h-28 text-sm outline-none resize-none"></textarea>
                 <div class="flex items-center bg-[#f0f9f9] p-4 rounded-2xl">
                     <span class="text-[#64cccc] font-black mr-3 text-lg">¥</span>
-                    <input v-model.number="editingEvent.cost" type="number" placeholder="金額" class="bg-transparent flex-1 outline-none font-bold">
+                    <input v-model.number="editingEvent.cost" type="number" placeholder="預算金額" class="bg-transparent flex-1 outline-none font-bold">
                 </div>
-                <div v-if="editingEvent.image" class="relative">
+                <div v-if="editingEvent.image" class="relative group">
                     <img :src="editingEvent.image" class="img-box shadow-md">
-                    <button @click="editingEvent.image = null" class="absolute top-4 right-4 bg-black/60 text-white w-8 h-8 rounded-full flex items-center justify-center"><i class="fa-solid fa-trash text-xs"></i></button>
+                    <button @click="editingEvent.image = null" class="absolute top-4 right-4 bg-black/60 text-white w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-sm"><i class="fa-solid fa-trash-can text-sm"></i></button>
                 </div>
-                <label v-else class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-[#64cccc] rounded-[2rem] bg-[#f0f9f9] cursor-pointer active:bg-[#e6f4f4]">
-                    <i class="fa-solid fa-camera text-[#64cccc] text-2xl mb-2"></i>
-                    <span class="text-xs text-[#64cccc] font-bold">影相 / 揀相</span>
+                <label v-else class="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-[#64cccc] rounded-[2.5rem] bg-[#f0f9f9] cursor-pointer hover:bg-[#e8f6f6] transition-all active:scale-[0.98]">
+                    <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-2 shadow-sm">
+                        <i class="fa-solid fa-camera text-[#64cccc] text-xl"></i>
+                    </div>
+                    <span class="text-xs text-[#64cccc] font-bold tracking-wider">影相 / 揀相片</span>
                     <input type="file" @change="uploadPhoto" class="hidden" accept="image/*">
                 </label>
             </div>
-            <div class="flex gap-4 mt-8">
-                <button v-if="!isNew" @click="deleteEvent" class="flex-1 py-4 text-rose-400 font-bold bg-rose-50 rounded-2xl">刪除</button>
-                <button @click="saveEvent" class="flex-[2] bg-[#64cccc] text-white py-4 rounded-2xl font-bold shadow-lg">儲存行程</button>
+            <div class="flex gap-4 mt-10">
+                <button v-if="!isNew" @click="deleteEvent" class="flex-1 py-4 text-rose-400 font-bold bg-rose-50 rounded-2xl active:scale-95 transition-all">刪除</button>
+                <button @click="saveEvent" class="flex-[2.5] bg-[#64cccc] text-white py-4 rounded-2xl font-bold shadow-lg active:scale-95 transition-all">儲存行程</button>
             </div>
         </div>
     </div>
@@ -140,31 +149,50 @@ createApp({
         confirmDate() {
             this.showDateSettings = false;
             this.saveToLocal();
-            this.$forceUpdate();
+            // 強制刷新畫面日期顯示
+            this.$nextTick(() => { this.$forceUpdate(); });
         },
         async getLocation() {
-            if (!navigator.geolocation) { this.currentLocationName = "不支援定位"; return; }
+            this.currentLocationName = "定位中...";
+            if (!navigator.geolocation) { this.currentLocationName = "東京"; return; }
+            
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 this.lat = pos.coords.latitude;
                 this.lon = pos.coords.longitude;
-                // 🌍 具體地方名轉換 (Reverse Geocoding)
+                
+                // 🌍 雙重地名轉換機制
                 try {
+                    // 方法 1: OpenStreetMap (繁體中文)
                     const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${this.lat}&lon=${this.lon}&accept-language=zh-HK`);
                     const data = await res.json();
-                    // 優先攞 地區名 或 城市名
-                    this.currentLocationName = data.address.suburb || data.address.city || data.address.town || "已定位";
-                } catch (e) { this.currentLocationName = "當前位置"; }
+                    this.currentLocationName = data.address.suburb || data.address.district || data.address.city || data.address.town || "已定位";
+                } catch (e) {
+                    try {
+                        // 方法 2: BigDataCloud (備用)
+                        const res2 = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${this.lat}&longitude=${this.lon}&localityLanguage=zh`);
+                        const data2 = await res2.json();
+                        this.currentLocationName = data2.locality || data2.city || "當前位置";
+                    } catch (e2) {
+                        this.currentLocationName = "當前位置";
+                    }
+                }
                 this.fetchWeather();
-            }, () => { this.currentLocationName = "東京 (預設)"; this.fetchWeather(); });
+            }, () => { 
+                this.currentLocationName = "東京 (預設)"; 
+                this.fetchWeather(); 
+            }, { timeout: 10000 });
         },
         async fetchWeather() {
-            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${this.lat}&longitude=${this.lon}&current_weather=true`);
-            const data = await res.json();
-            this.weather = { temp: Math.round(data.current_weather.temperature), code: data.current_weather.weathercode };
+            try {
+                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${this.lat}&longitude=${this.lon}&current_weather=true`);
+                const data = await res.json();
+                this.weather = { temp: Math.round(data.current_weather.temperature), code: data.current_weather.weathercode };
+            } catch (e) { console.error("天氣失敗"); }
         },
         uploadPhoto(e) {
             const file = e.target.files[0];
             if (!file) return;
+            // 壓縮處理 (防止 LocalStorage 爆量)
             const reader = new FileReader();
             reader.onload = (f) => { this.editingEvent.image = f.target.result; };
             reader.readAsDataURL(file);
@@ -207,19 +235,22 @@ createApp({
             this.showEditModal = false; this.saveToLocal();
         },
         deleteEvent() {
-            if(confirm('刪除？')) { this.itinerary[this.activeDayIdx].events.splice(this.editingIdx, 1); this.showEditModal = false; this.saveToLocal(); }
+            if(confirm('確定刪除？')) {
+                this.itinerary[this.activeDayIdx].events.splice(this.editingIdx, 1);
+                this.showEditModal = false; this.saveToLocal();
+            }
         },
         addDay() { this.itinerary.push({ events: [] }); this.activeDayIdx = this.itinerary.length - 1; this.saveToLocal(); },
-        saveToLocal() { localStorage.setItem('travel_pro_v9', JSON.stringify({ i: this.itinerary, s: this.startDate })); }
+        saveToLocal() { localStorage.setItem('travel_v10_final', JSON.stringify({ i: this.itinerary, s: this.startDate })); }
     },
     computed: {
-        travelTip() { return this.weather?.code < 4 ? "☀️ 天氣好正，出發啦！" : "☔ 帶返把遮啦。"; }
+        travelTip() { return this.weather?.code < 4 ? "☀️ 天氣好正，出發啦！" : "☔ 記得帶把遮呀。"; }
     },
     mounted() {
-        const saved = JSON.parse(localStorage.getItem('travel_pro_v9'));
+        const saved = JSON.parse(localStorage.getItem('travel_v10_final'));
         if(saved) { this.itinerary = saved.i; this.startDate = saved.s; }
         this.updateTime(); setInterval(this.updateTime, 10000); this.getLocation();
-        Sortable.create(this.$refs.sortableList, { animation: 200, onEnd: (evt) => {
+        Sortable.create(this.$refs.sortableList, { animation: 200, delay: 50, onEnd: (evt) => {
             const curr = this.itinerary[this.activeDayIdx].events;
             const item = curr.splice(evt.oldIndex, 1)[0];
             curr.splice(evt.newIndex, 0, item);
