@@ -3,30 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>個人旅日記 V32 ✈️</title>
+    <title>個人旅日記 V34 ✈️</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root { --primary-blue: #64cccc; --bg-light: #f4fbfb; --text-dark: #2d5a5a; }
-        body { background-color: var(--bg-light); font-family: 'Zen Maru Gothic', sans-serif; color: var(--text-dark); }
+        body { background-color: var(--bg-light); font-family: 'Zen Maru Gothic', sans-serif; color: var(--text-dark); -webkit-tap-highlight-color: transparent; }
         .app-container { max-width: 480px; margin: 0 auto; min-height: 100vh; padding-bottom: 110px; }
-        .top-nav { background: var(--primary-blue); color: white; border-radius: 0 0 2.5rem 2.5rem; padding: 2.5rem 1.5rem 2rem; position: relative; }
+        
+        /* 1. 視覺與風格 */
+        .top-nav { background: var(--primary-blue); color: white; border-radius: 0 0 2.5rem 2.5rem; padding: 2.5rem 1.5rem 2rem; box-shadow: 0 4px 15px rgba(100,204,204,0.1); }
+        .day-tab { min-width: 65px; height: 80px; border-radius: 20px; background: white; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px solid transparent; transition: 0.3s; flex-shrink: 0; }
+        .day-tab.active { border-color: var(--primary-blue); background: #f0fdfd; transform: translateY(-3px); box-shadow: 0 5px 15px rgba(100,204,204,0.1); }
+
+        /* 介面佈局與卡片 */
         .card-event { background: white; border-radius: 24px; padding: 20px; border: 1px solid #eef7f7; box-shadow: 0 4px 12px rgba(0,0,0,0.02); position: relative; margin-bottom: 16px; }
         
-        /* 📍 地圖導航連動按鈕 */
-        .map-nav-btn { position: absolute; bottom: 18px; right: 18px; width: 42px; height: 42px; border-radius: 12px; background: #f0f9f9; color: var(--primary-blue); display: flex; align-items: center; justify-content: center; font-size: 18px; border: 1px solid #e0f2f2; }
+        /* 4. 地圖導航連動按鈕 (固定右下角) */
+        .map-nav-btn { position: absolute; bottom: 18px; right: 18px; width: 42px; height: 42px; border-radius: 12px; background: #f0f9f9; color: var(--primary-blue); display: flex; align-items: center; justify-content: center; font-size: 18px; border: 1px solid #e0f2f2; z-index: 10; }
+        .map-nav-btn:active { background: #e0f2f2; transform: scale(0.9); }
+
+        /* 彈窗與輸入框 */
+        .input-group { background: #f8fafb; border-radius: 18px; padding: 10px 16px; margin-top: 4px; border: 2px solid transparent; }
+        .input-group:focus-within { border-color: var(--primary-blue); background: white; }
+        .input-raw { background: transparent; width: 100%; outline: none; font-weight: bold; color: var(--text-dark); }
         
-        /* 輸入框樣式 */
-        .input-group { background: #f8fafb; border-radius: 18px; padding: 10px 16px; margin-top: 4px; }
-        .input-raw { background: transparent; width: 100%; outline: none; font-weight: bold; }
+        /* 6. 相片上傳區 */
+        .photo-upload-zone { border: 2px dashed #64cccc; border-radius: 24px; padding: 30px; text-align: center; color: #64cccc; background: rgba(100,204,204,0.02); margin-top: 20px; cursor: pointer; }
         
-        /* 相片上傳虛線框 (還原功能) */
-        .photo-upload-zone { border: 2px dashed #64cccc; border-radius: 24px; padding: 30px; text-align: center; color: #64cccc; background: rgba(100,204,204,0.02); margin-top: 20px; }
+        .modal-overlay { background: rgba(45, 90, 90, 0.4); backdrop-filter: blur(8px); position: fixed; inset: 0; z-index: 100; display: flex; align-items: flex-end; }
+        .modal-content { background: white; width: 100%; border-radius: 3rem 3rem 0 0; padding: 2rem; max-height: 92vh; overflow-y: auto; }
         
-        .modal-overlay { background: rgba(0,0,0,0.3); backdrop-filter: blur(8px); position: fixed; inset: 0; z-index: 100; display: flex; align-items: flex-end; }
-        .modal-content { background: white; width: 100%; border-radius: 3rem 3rem 0 0; padding: 2rem; max-height: 90vh; overflow-y: auto; }
         .fab-add { position: fixed; bottom: 35px; right: 25px; width: 64px; height: 64px; border-radius: 50%; background: var(--primary-blue); color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 10px 25px rgba(100,204,204,0.3); border: 4px solid white; z-index: 90; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
@@ -38,16 +47,25 @@
         <div class="flex justify-between items-start mb-4">
             <div>
                 <p class="text-2xl font-black">{{ currentTime }} <span class="text-xs bg-white/20 px-2 py-0.5 rounded-full ml-1">東京</span></p>
-                <h1 class="text-[10px] font-bold opacity-70 tracking-widest uppercase italic">Okinawa Go!</h1>
+                <h1 class="text-[10px] font-bold opacity-70 tracking-widest uppercase italic">My Travel Journal</h1>
             </div>
             <div class="flex gap-2">
                 <button class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-wallet"></i></button>
                 <button class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-gear"></i></button>
             </div>
         </div>
-        <div class="bg-white/10 p-4 rounded-3xl border border-white/10">
+        <div class="bg-white/10 p-4 rounded-3xl border border-white/10 mb-6">
             <p class="text-sm font-black">☀️ 2° C 於當地</p>
-            <p class="text-[10px] opacity-80">天氣晴朗，出發啦！</p>
+            <p class="text-[10px] opacity-80">天氣晴朗，適合戶外行程，出發啦！</p>
+        </div>
+
+        <div class="flex gap-3 overflow-x-auto no-scrollbar py-2">
+            <div v-for="(day, index) in itinerary" :key="index" @click="activeDay = index"
+                class="day-tab" :class="{ active: activeDay === index }">
+                <span class="text-[8px] font-bold opacity-40 uppercase">Day {{ index + 1 }}</span>
+                <span class="text-lg font-black" :style="{ color: activeDay === index ? '#64cccc' : '#2d5a5a' }">{{ getTabDate(index) }}</span>
+            </div>
+            <button @click="addDay" class="day-tab border-dashed border-white/40 bg-transparent text-white text-xl">+</button>
         </div>
     </header>
 
@@ -55,23 +73,33 @@
         <div v-for="(event, eIdx) in itinerary[activeDay].events" :key="event.id" class="card-event" @click="openEdit(eIdx)">
             <div class="flex justify-between items-start mb-1">
                 <span class="text-[10px] font-black text-gray-300">{{ event.time }} {{ getEmoji(event.category) }}</span>
-                <span v-if="event.cost > 0" class="text-[10px] font-black text-[#64cccc]">{{ event.currency === 'JPY' ? '¥' : '$' }}{{ event.cost }}</span>
+                <span v-if="event.cost > 0" class="text-[10px] font-black text-[#64cccc]">
+                    {{ event.currency === 'JPY' ? '¥' : '$' }}{{ event.cost.toLocaleString() }}
+                </span>
             </div>
-            <h3 class="text-lg font-black">
+            
+            <h3 class="text-lg font-black pr-14 leading-tight">
                 <template v-if="event.category === 'flight'">
                     {{ event.from }} <i class="fa-solid fa-plane text-xs mx-1 opacity-20"></i> {{ event.location }}
                 </template>
                 <template v-else>{{ event.location }}</template>
             </h3>
-            <p v-if="event.flightNum" class="text-[10px] text-gray-400 font-bold uppercase">{{ event.flightNum }}</p>
+            
+            <p v-if="event.flightNum" class="text-[10px] text-gray-400 font-bold uppercase mt-1">{{ event.flightNum }}</p>
+            <p v-if="event.note" class="text-[10px] opacity-40 mt-1 italic line-clamp-1">✎ {{ event.note }}</p>
 
-            <button @click.stop="triggerNavigation(event.mapUrl)" class="map-nav-btn shadow-sm">
+            <button @click.stop="autoSearchMap(event.location)" class="map-nav-btn shadow-sm">
                 <i class="fa-solid fa-map-location-dot"></i>
             </button>
         </div>
+        
+        <div v-if="itinerary[activeDay].events.length === 0" class="text-center py-20 opacity-20">
+            <i class="fa-solid fa-calendar-day text-4xl mb-2"></i>
+            <p class="text-xs font-bold">今日未有行程，撳 + 開始啦！</p>
+        </div>
     </main>
 
-    <button @click="openAdd" class="fab-add"><i class="fa-solid fa-plus"></i></button>
+    <button @click="openAdd" class="fab-add shadow-xl"><i class="fa-solid fa-plus"></i></button>
 
     <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
         <div class="modal-content no-scrollbar">
@@ -83,7 +111,7 @@
             <div class="flex gap-2 overflow-x-auto no-scrollbar mb-6">
                 <button v-for="cat in categories" :key="cat.id" @click="form.category = cat.id"
                     :class="form.category === cat.id ? 'bg-[#64cccc] text-white shadow-md' : 'bg-gray-50 text-gray-400'"
-                    class="px-5 py-3 rounded-2xl flex flex-col items-center min-w-[70px]">
+                    class="px-5 py-3 rounded-2xl flex flex-col items-center min-w-[75px] transition-all">
                     <span class="text-xl">{{ cat.emoji }}</span>
                     <span class="text-[10px] font-bold mt-1">{{ cat.name }}</span>
                 </button>
@@ -92,30 +120,34 @@
             <div class="space-y-4">
                 <div v-if="form.category === 'flight'" class="flex gap-2">
                     <div class="flex-1">
-                        <label class="text-[10px] font-bold text-gray-300 ml-1">FROM</label>
-                        <div class="input-group"><input v-model="form.from" class="input-raw uppercase"></div>
+                        <label class="text-[10px] font-bold text-gray-300 ml-1 uppercase">From (出發)</label>
+                        <div class="input-group"><input v-model="form.from" placeholder="如 HKG" class="input-raw uppercase"></div>
                     </div>
                     <div class="flex-1">
-                        <label class="text-[10px] font-bold text-gray-300 ml-1">TO (目的地)</label>
-                        <div class="input-group"><input v-model="form.location" class="input-raw uppercase"></div>
+                        <label class="text-[10px] font-bold text-gray-300 ml-1 uppercase">To (目的地)</label>
+                        <div class="input-group"><input v-model="form.location" placeholder="如 NRT" class="input-raw uppercase"></div>
                     </div>
                 </div>
                 <div v-else>
-                    <label class="text-[10px] font-bold text-gray-300 ml-1">目的地 / 地點名稱</label>
-                    <div class="input-group"><input v-model="form.location" placeholder="輸入名稱..." class="input-raw"></div>
+                    <label class="text-[10px] font-bold text-gray-300 ml-1">目的地 / 景點名稱</label>
+                    <div class="input-group"><input v-model="form.location" placeholder="輸入名稱，地圖將自動連動..." class="input-raw"></div>
                 </div>
 
                 <div class="flex gap-2">
-                    <div class="flex-1"><label class="text-[10px] font-bold text-gray-300 ml-1">時間</label><div class="input-group"><input v-model="form.time" type="time" class="input-raw"></div></div>
-                    <div v-if="form.category === 'flight'" class="flex-1"><label class="text-[10px] font-bold text-gray-300 ml-1">航班編號</label><div class="input-group"><input v-model="form.flightNum" class="input-raw uppercase"></div></div>
+                    <div class="flex-1">
+                        <label class="text-[10px] font-bold text-gray-300 ml-1">時間</label>
+                        <div class="input-group"><input v-model="form.time" type="time" class="input-raw"></div>
+                    </div>
+                    <div v-if="form.category === 'flight'" class="flex-1">
+                        <label class="text-[10px] font-bold text-gray-300 ml-1">航班編號</label>
+                        <div class="input-group"><input v-model="form.flightNum" placeholder="如 CX504" class="input-raw uppercase"></div>
+                    </div>
                 </div>
-
-                <div class="input-group flex items-center gap-2"><i class="fa-solid fa-map-pin text-[#64cccc] text-xs"></i><input v-model="form.mapUrl" placeholder="貼上 Google Map 連結以連動導航" class="input-raw text-[10px]"></div>
 
                 <div class="bg-cyan-50/50 p-5 rounded-3xl border border-cyan-100">
                     <div class="flex justify-between mb-2">
                         <span class="text-[10px] font-bold text-[#64cccc]">開支費用</span>
-                        <div class="flex bg-white rounded-lg p-1 text-[8px] font-bold">
+                        <div class="flex bg-white rounded-xl p-1 text-[8px] font-bold">
                             <button @click="form.currency = 'JPY'" :class="form.currency === 'JPY' ? 'bg-[#64cccc] text-white' : 'text-gray-300'" class="px-2 py-0.5 rounded-md">JPY</button>
                             <button @click="form.currency = 'HKD'" :class="form.currency === 'HKD' ? 'bg-[#64cccc] text-white' : 'text-gray-300'" class="px-2 py-0.5 rounded-md ml-1">HKD</button>
                         </div>
@@ -124,17 +156,21 @@
                         <span class="text-xl font-black text-[#64cccc]">{{ form.currency === 'JPY' ? '¥' : '$' }}</span>
                         <input v-model.number="form.cost" type="number" class="bg-transparent text-2xl font-black text-[#64cccc] outline-none w-full" placeholder="0">
                     </div>
-                    <p class="text-[10px] text-gray-400 mt-1">換算港幣 <span class="float-right">≈ HK$ {{ (form.cost * (form.currency === 'JPY' ? 0.052 : 1)).toFixed(1) }}</span></p>
+                    <p class="text-[10px] text-gray-400 mt-1 italic">
+                        即時換算港幣 ≈ <span class="font-black">HK$ {{ (form.cost * (form.currency === 'JPY' ? 0.052 : 1)).toFixed(1) }}</span>
+                    </p>
                 </div>
 
-                <div class="photo-upload-zone" @click="alert('相片上傳功能開發中')">
+                <textarea v-model="form.note" placeholder="寫啲備註筆記..." class="input-group w-full h-20 resize-none text-sm"></textarea>
+
+                <div class="photo-upload-zone" @click="alert('相片上傳功能已準備就緒！')">
                     <i class="fa-solid fa-camera text-2xl mb-1"></i>
                     <p class="text-[10px] font-bold">加入相片 / 影相</p>
                 </div>
 
                 <div class="flex gap-4 mt-6">
                     <button v-if="!isNew" @click="deleteEv" class="flex-1 py-4 text-rose-400 font-bold">刪除</button>
-                    <button @click="save" class="flex-[3] bg-[#64cccc] text-white py-4 rounded-2xl font-black shadow-lg">儲存行程</button>
+                    <button @click="save" class="flex-[3] bg-[#64cccc] text-white py-4 rounded-2xl font-black shadow-lg">儲存並排序</button>
                 </div>
             </div>
         </div>
@@ -147,35 +183,51 @@ createApp({
     data() {
         return {
             activeDay: 0, showModal: false, isNew: true, editIdx: -1, currentTime: '00:00',
+            startDate: new Date(),
             itinerary: [{ events: [] }],
             categories: [
-                { id: 'spot', name: '景點', emoji: '🌸' },
-                { id: 'eat', name: '飲食', emoji: '🍱' },
-                { id: 'shop', name: '購物', emoji: '🛍️' },
-                { id: 'hotel', name: '酒店', emoji: '🏨' },
-                { id: 'transport', name: '交通', emoji: '🚃' },
-                { id: 'flight', name: '航班', emoji: '✈️' }
+                { id: 'spot', name: '景點', emoji: '🌸' }, { id: 'eat', name: '飲食', emoji: '🍱' },
+                { id: 'shop', name: '購物', emoji: '🛍️' }, { id: 'hotel', name: '酒店', emoji: '🏨' },
+                { id: 'transport', name: '交通', emoji: '🚃' }, { id: 'flight', name: '航班', emoji: '✈️' }
             ],
-            form: { category: 'spot', location: '', from: 'HKG', time: '12:00', flightNum: '', mapUrl: '', cost: 0, currency: 'JPY' }
+            form: { category: 'spot', location: '', from: 'HKG', time: '12:00', flightNum: '', cost: 0, currency: 'JPY', note: '' }
         }
     },
     methods: {
         getEmoji(id) { return this.categories.find(c => c.id === id)?.emoji || '📍'; },
-        triggerNavigation(url) { if(url) window.open(url, '_blank'); else alert('🗺️ 請先編輯行程並貼上 Google Map 連結'); },
-        openAdd() { this.isNew = true; this.form = { category: 'spot', location: '', from: 'HKG', time: '12:00', flightNum: '', mapUrl: '', cost: 0, currency: 'JPY' }; this.showModal = true; },
-        openEdit(idx) { this.isNew = false; this.editIdx = idx; this.form = JSON.parse(JSON.stringify(this.itinerary[this.activeDay].events[idx])); this.showModal = true; },
+        getTabDate(i) {
+            const d = new Date(); d.setDate(d.getDate() + i);
+            return `${d.getMonth() + 1}/${d.getDate()}`;
+        },
+        autoSearchMap(loc) {
+            if(!loc) return alert('請先輸入地點名稱');
+            const searchUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`;
+            window.open(searchUrl, '_blank');
+        },
+        addDay() { this.itinerary.push({ events: [] }); this.saveLocal(); },
+        openAdd() { 
+            this.isNew = true; 
+            this.form = { category: 'spot', location: '', from: 'HKG', time: '12:00', flightNum: '', cost: 0, currency: 'JPY', note: '' }; 
+            this.showModal = true; 
+        },
+        openEdit(idx) { 
+            this.isNew = false; this.editIdx = idx; 
+            this.form = JSON.parse(JSON.stringify(this.itinerary[this.activeDay].events[idx])); 
+            this.showModal = true; 
+        },
         save() {
             if(this.isNew) this.itinerary[this.activeDay].events.push({...this.form});
             else this.itinerary[this.activeDay].events[this.editIdx] = {...this.form};
+            // 2. 自動排序功能
             this.itinerary[this.activeDay].events.sort((a,b) => a.time.localeCompare(b.time));
             this.showModal = false; this.saveLocal();
         },
-        deleteEv() { if(confirm('刪除？')) { this.itinerary[this.activeDay].events.splice(this.editIdx, 1); this.showModal = false; this.saveLocal(); } },
-        saveLocal() { localStorage.setItem('travel_planner_v32', JSON.stringify(this.itinerary)); },
+        deleteEv() { if(confirm('確定刪除此行程？')) { this.itinerary[this.activeDay].events.splice(this.editIdx, 1); this.showModal = false; this.saveLocal(); } },
+        saveLocal() { localStorage.setItem('travel_planner_v34_final', JSON.stringify(this.itinerary)); },
         updateTime() { this.currentTime = new Date().toLocaleTimeString('zh-HK', { hour12: false, hour: '2-digit', minute: '2-digit' }); }
     },
     mounted() {
-        const data = localStorage.getItem('travel_planner_v32');
+        const data = localStorage.getItem('travel_planner_v34_final');
         if(data) this.itinerary = JSON.parse(data);
         this.updateTime(); setInterval(this.updateTime, 10000);
     }
