@@ -3,173 +3,178 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>個人旅日記 V35 ✈️ (含購物清單)</title>
+    <title>個人旅日記 V36 ✈️</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root { --primary-blue: #64cccc; --primary-green: #5eb586; --bg-light: #f4fbfb; --text-dark: #2d5a5a; }
-        body { background-color: var(--bg-light); font-family: 'Zen Maru Gothic', sans-serif; color: var(--text-dark); -webkit-tap-highlight-color: transparent; }
-        .app-container { max-width: 480px; margin: 0 auto; min-height: 100vh; padding-bottom: 120px; }
+        :root { --primary-blue: #64cccc; --bg-light: #f4fbfb; --text-dark: #2d5a5a; }
+        body { background-color: var(--bg-light); font-family: 'Zen Maru Gothic', sans-serif; color: var(--text-dark); }
+        .app-container { max-width: 480px; margin: 0 auto; min-height: 100vh; padding-bottom: 50px; }
+        .top-nav { background: var(--primary-blue); color: white; border-radius: 0 0 2.5rem 2.5rem; padding: 2.5rem 1.5rem 2rem; position: relative; }
         
-        /* 視覺與風格 */
-        .top-nav { background: var(--primary-blue); color: white; border-radius: 0 0 2.5rem 2.5rem; padding: 2.5rem 1.5rem 2rem; }
-        .card-event { background: white; border-radius: 24px; padding: 20px; border: 1px solid #eef7f7; box-shadow: 0 4px 12px rgba(0,0,0,0.02); position: relative; margin-bottom: 16px; }
-        
-        /* 導航欄 */
-        .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: white; display: flex; justify-content: space-around; padding: 15px 10px 30px; box-shadow: 0 -5px 20px rgba(0,0,0,0.05); z-index: 100; }
-        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #cbd5e0; font-size: 10px; font-weight: bold; }
-        .nav-item.active { color: var(--primary-blue); }
-        .nav-item.active-green { color: var(--primary-green); }
+        /* 右上角按鈕組 */
+        .top-actions { display: flex; gap: 8px; position: absolute; top: 2.5rem; right: 1.5rem; }
+        .action-btn { width: 40px; height: 40px; border-radius: 12px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; color: white; }
 
-        /* 購物清單專屬樣式 */
-        .shop-tag { background: #e6f4ed; color: var(--primary-green); padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: bold; }
-        .shop-input { border: none; background: #f0f9f4; border-radius: 15px; padding: 12px 20px; width: 100%; outline: none; }
-        .add-btn { background: var(--primary-green); color: white; border-radius: 15px; padding: 10px 25px; font-weight: black; }
-        .list-item { background: white; border-radius: 18px; padding: 15px 20px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; }
-        .done-text { text-decoration: line-through; opacity: 0.3; }
+        .card-event { background: white; border-radius: 24px; padding: 20px; border: 1px solid #eef7f7; box-shadow: 0 4px 12px rgba(0,0,0,0.02); position: relative; margin-bottom: 16px; }
+        .map-nav-btn { position: absolute; bottom: 18px; right: 18px; width: 42px; height: 42px; border-radius: 12px; background: #f0f9f9; color: var(--primary-blue); display: flex; align-items: center; justify-content: center; border: 1px solid #e0f2f2; }
         
-        /* 地圖按鈕 */
-        .map-nav-btn { position: absolute; bottom: 18px; right: 18px; width: 42px; height: 42px; border-radius: 12px; background: #f0f9f9; color: var(--primary-blue); display: flex; align-items: center; justify-content: center; z-index: 10; border: 1px solid #e0f2f2; }
-        
-        .modal-overlay { background: rgba(45, 90, 90, 0.4); backdrop-filter: blur(8px); position: fixed; inset: 0; z-index: 1000; display: flex; align-items: flex-end; }
+        .photo-upload-zone { border: 2px dashed #64cccc; border-radius: 24px; padding: 30px; text-align: center; color: #64cccc; background: rgba(100,204,204,0.02); margin-top: 20px; }
+        .modal-overlay { background: rgba(0,0,0,0.3); backdrop-filter: blur(8px); position: fixed; inset: 0; z-index: 100; display: flex; align-items: flex-end; }
         .modal-content { background: white; width: 100%; border-radius: 3rem 3rem 0 0; padding: 2rem; max-height: 90vh; overflow-y: auto; }
-        .fab-add { position: fixed; bottom: 100px; right: 25px; width: 64px; height: 64px; border-radius: 50%; background: var(--primary-blue); color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 10px 25px rgba(100,204,204,0.3); border: 4px solid white; z-index: 90; }
+        .fab-add { position: fixed; bottom: 35px; right: 25px; width: 64px; height: 64px; border-radius: 50%; background: var(--primary-blue); color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 10px 25px rgba(100,204,204,0.3); border: 4px solid white; z-index: 90; cursor: pointer; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body>
 
 <div id="app" class="app-container">
-    
-    <div v-if="currentTab === 'itinerary'">
-        <header class="top-nav mb-6">
-            <div class="flex justify-between items-start mb-4">
-                <div>
-                    <p class="text-2xl font-black">{{ currentTime }}</p>
-                    <h1 class="text-[10px] font-bold opacity-70 tracking-widest uppercase italic">Okinawa Go!</h1>
-                </div>
-                <button class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-wallet"></i></button>
+    <header class="top-nav mb-6">
+        <div class="flex justify-between items-start mb-4">
+            <div>
+                <h1 class="text-xl font-black tracking-tight">旅日記</h1>
+                <p class="text-[10px] opacity-70 font-bold uppercase mt-1">My Travel Journal</p>
             </div>
-            <div class="bg-white/10 p-4 rounded-3xl border border-white/10 mb-6 text-sm font-black">☀️ 2° C 於當地</div>
-            <div class="flex gap-3 overflow-x-auto no-scrollbar py-2">
-                <div v-for="(day, index) in itinerary" :key="index" @click="activeDay = index" class="px-4 py-3 rounded-2xl bg-white text-center min-w-[60px]" :style="activeDay === index ? 'border:2px solid #64cccc' : ''">
-                    <span class="text-[8px] block opacity-40">Day {{index+1}}</span>
-                    <span class="font-black text-sm">{{getTabDate(index)}}</span>
-                </div>
+            <div class="top-actions">
+                <button @click="currentView = 'expense'" class="action-btn"><i class="fa-solid fa-wallet"></i></button>
+                <button @click="currentView = 'shopping'" class="action-btn"><i class="fa-solid fa-bag-shopping"></i></button>
+                <button class="action-btn"><i class="fa-solid fa-gear"></i></button>
             </div>
-        </header>
+        </div>
+        <div class="bg-white/10 p-4 rounded-3xl border border-white/10 mt-2">
+            <p class="text-sm font-black">☀️ {{ temperature }}° C 於 {{ location }}</p>
+            <p class="text-[10px] opacity-80">天氣好正，出發啦！</p>
+        </div>
 
-        <main class="px-6">
-            <div v-for="(event, eIdx) in itinerary[activeDay].events" :key="event.id" class="card-event" @click="openEdit(eIdx)">
+        <div class="flex gap-3 overflow-x-auto no-scrollbar py-4 mt-2">
+            <div v-for="(day, index) in itinerary" :key="index" @click="activeDay = index; currentView = 'itinerary'"
+                class="min-w-[60px] p-3 rounded-2xl bg-white text-center transition-all"
+                :style="activeDay === index && currentView === 'itinerary' ? 'border:2px solid #64cccc' : 'opacity:0.6'">
+                <span class="text-[8px] block opacity-40 uppercase">Day {{ index + 1 }}</span>
+                <span class="font-black text-sm">{{ getTabDate(index) }}</span>
+            </div>
+            <button @click="addDay" class="min-w-[40px] rounded-2xl bg-white/20 text-white font-bold text-xl">+</button>
+        </div>
+    </header>
+
+    <main v-if="currentView === 'itinerary'" class="px-6">
+        <div v-for="(event, eIdx) in itinerary[activeDay].events" :key="event.id" class="card-event" @click="openEdit(eIdx)">
+            <div class="flex justify-between items-start mb-1">
                 <span class="text-[10px] font-black text-gray-300">{{ event.time }} {{ getEmoji(event.category) }}</span>
-                <h3 class="text-lg font-black mt-1">{{ event.location }}</h3>
-                <button @click.stop="autoSearchMap(event.location)" class="map-nav-btn"><i class="fa-solid fa-map-location-dot"></i></button>
+                <span v-if="event.cost > 0" class="text-[10px] font-black text-[#64cccc]">¥{{ event.cost.toLocaleString() }}</span>
             </div>
-        </main>
-        <button @click="openAdd" class="fab-add"><i class="fa-solid fa-plus"></i></button>
-    </div>
+            <h3 class="text-lg font-black">
+                <template v-if="event.category === 'flight'">{{ event.from }} ✈️ {{ event.location }}</template>
+                <template v-else>{{ event.location }}</template>
+            </h3>
+            <button @click.stop="autoSearchMap(event.location)" class="map-nav-btn"><i class="fa-solid fa-map-location-dot"></i></button>
+        </div>
+        <div v-if="itinerary[activeDay].events.length === 0" class="text-center py-20 opacity-20 font-bold italic">今日未有安排，撳 + 開始啦！</div>
+    </main>
 
-    <div v-if="currentTab === 'shopping'" class="px-6 pt-10">
+    <main v-if="currentView === 'shopping'" class="px-6">
         <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-black border-b-4 border-[#5eb586] pb-1">想買清單</h2>
-            <span class="shop-tag">已完成 {{ doneCount }}/{{ shoppingList.length }}</span>
+            <h2 class="text-xl font-black border-b-4 border-[#64cccc] pb-1">想買清單</h2>
+            <span class="text-xs bg-cyan-50 text-[#64cccc] px-3 py-1 rounded-full font-bold">已完成 {{ doneCount }}/{{ shoppingList.length }}</span>
         </div>
-
-        <div class="bg-[#f0f9f4] rounded-[30px] p-6 mb-8 border border-[#e0f2ed]">
-            <p class="text-[#5eb586] text-xs font-black mb-3 ml-2">快速新增項目</p>
-            <div class="flex gap-3">
-                <input v-model="newItemName" @keyup.enter="addShopItem" placeholder="例如：合利他命" class="shop-input text-sm font-bold">
-                <button @click="addShopItem" class="add-btn text-sm">Add</button>
+        <div class="bg-white rounded-3xl p-4 shadow-sm border border-cyan-50 mb-6">
+            <div class="flex gap-2">
+                <input v-model="newItemName" @keyup.enter="addShopItem" placeholder="例如：合利他命" class="flex-1 bg-cyan-50/30 rounded-xl px-4 text-sm font-bold outline-none">
+                <button @click="addShopItem" class="bg-[#64cccc] text-white px-5 py-2 rounded-xl font-black text-sm">Add</button>
             </div>
         </div>
+        <div v-for="(item, index) in shoppingList" :key="index" @click="toggleShopItem(index)" class="flex items-center gap-3 bg-white p-4 rounded-2xl mb-2 shadow-sm">
+            <i :class="item.done ? 'fa-solid fa-circle-check text-[#64cccc]' : 'fa-regular fa-circle text-gray-200'" class="text-xl"></i>
+            <span class="text-sm font-bold flex-1" :class="{ 'line-through opacity-30': item.done }">{{ item.name }}</span>
+            <button @click.stop="removeShopItem(index)" class="text-gray-200 text-xs">×</button>
+        </div>
+    </main>
 
-        <div v-if="shoppingList.length > 0">
-            <div v-for="(item, index) in shoppingList" :key="index" @click="toggleShopItem(index)" class="list-item shadow-sm border border-gray-50">
-                <div class="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all" :class="item.done ? 'bg-[#5eb586] border-[#5eb586]' : 'border-gray-200'">
-                    <i v-if="item.done" class="fa-solid fa-check text-white text-[10px]"></i>
+    <button @click="openAdd" class="fab-add"><i class="fa-solid fa-plus"></i></button>
+
+    <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
+        <div class="modal-content no-scrollbar">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="font-black text-xl">{{ isNew ? '✨ 新增行程' : '📝 編輯行程' }}</h3>
+                <button @click="showModal = false" class="text-gray-300 text-3xl">×</button>
+            </div>
+            
+            <div class="space-y-4">
+                <div class="flex gap-2 overflow-x-auto no-scrollbar mb-4">
+                    <button v-for="cat in categories" :key="cat.id" @click="form.category = cat.id"
+                        :class="form.category === cat.id ? 'bg-[#64cccc] text-white' : 'bg-gray-50 text-gray-400'"
+                        class="px-4 py-2 rounded-xl min-w-[70px] text-xs font-bold">{{ cat.emoji }} {{ cat.name }}</button>
                 </div>
-                <span class="text-sm font-bold flex-1" :class="{ 'done-text': item.done }">{{ item.name }}</span>
-                <button @click.stop="removeShopItem(index)" class="text-gray-200 text-xs px-2">×</button>
+
+                <div v-if="form.category === 'flight'" class="flex gap-2">
+                    <input v-model="form.from" placeholder="From HKG" class="flex-1 bg-gray-50 p-4 rounded-2xl outline-none font-bold">
+                    <input v-model="form.location" placeholder="To NRT" class="flex-1 bg-gray-50 p-4 rounded-2xl outline-none font-bold">
+                </div>
+                <input v-else v-model="form.location" placeholder="目的地名稱" class="w-full bg-gray-50 p-4 rounded-2xl outline-none font-bold">
+                
+                <div class="flex gap-2">
+                    <input v-model="form.time" type="time" class="flex-1 bg-gray-50 p-4 rounded-2xl outline-none font-bold">
+                    <input v-if="form.category === 'flight'" v-model="form.flightNum" placeholder="航班編號" class="flex-1 bg-gray-50 p-4 rounded-2xl outline-none font-bold">
+                </div>
+
+                <div class="bg-cyan-50/50 p-4 rounded-2xl">
+                    <p class="text-[10px] font-bold text-[#64cccc] mb-2 uppercase">開支費用 (JPY)</p>
+                    <input v-model.number="form.cost" type="number" class="bg-transparent text-xl font-black w-full outline-none" placeholder="0">
+                    <p class="text-[10px] opacity-40 mt-1">≈ HK$ {{ (form.cost * 0.052).toFixed(1) }}</p>
+                </div>
+
+                <div class="photo-upload-zone"><i class="fa-solid fa-camera text-2xl mb-1"></i><p class="text-[10px] font-bold">加入相片 / 影相</p></div>
+                <button @click="save" class="w-full bg-[#64cccc] text-white py-4 rounded-2xl font-black shadow-lg">儲存行程</button>
             </div>
         </div>
-        
-        <div v-else class="text-center py-20 opacity-30">
-            <p class="text-xs font-bold italic">清單係空嘅，快啲去補貨！</p>
-        </div>
     </div>
-
-    <div v-if="currentTab === 'expense'" class="flex flex-col items-center justify-center h-[70vh] opacity-20">
-        <i class="fa-solid fa-receipt text-6xl mb-4"></i>
-        <p class="font-black">分帳功能開發中...</p>
-    </div>
-
-    <nav class="bottom-nav">
-        <div class="nav-item" :class="{ active: currentTab === 'itinerary' }" @click="currentTab = 'itinerary'">
-            <i class="fa-solid fa-location-dot text-xl"></i>
-            <span>行程</span>
-        </div>
-        <div class="nav-item" :class="{ 'active-green': currentTab === 'shopping' }" @click="currentTab = 'shopping'">
-            <i class="fa-solid fa-bag-shopping text-xl"></i>
-            <span>購物</span>
-        </div>
-        <div class="nav-item" :class="{ active: currentTab === 'expense' }" @click="currentTab = 'expense'">
-            <i class="fa-solid fa-wallet text-xl"></i>
-            <span>分帳</span>
-        </div>
-    </nav>
-
-    </div>
+</div>
 
 <script>
 const { createApp } = Vue;
 createApp({
     data() {
         return {
-            currentTab: 'itinerary', // 切換分頁
-            currentTime: '00:00',
-            activeDay: 0,
+            currentView: 'itinerary', activeDay: 0, showModal: false, isNew: true,
+            location: '沙田區', temperature: 13,
             itinerary: [{ events: [] }],
-            shoppingList: [], // 購物清單數據
-            newItemName: '',
-            showModal: false, isNew: true,
-            form: { category: 'spot', location: '', time: '12:00', cost: 0, currency: 'JPY' }
+            shoppingList: [], newItemName: '',
+            categories: [{id:'spot',name:'景點',emoji:'🌸'},{id:'eat',name:'飲食',emoji:'🍱'},{id:'shop',name:'購物',emoji:'🛍️'},{id:'hotel',name:'酒店',emoji:'🏨'},{id:'transport',name:'交通',emoji:'🚃'},{id:'flight',name:'航班',emoji:'✈️'}],
+            form: { category: 'spot', location: '', from: '', time: '12:00', cost: 0, flightNum: '' }
         }
     },
-    computed: {
-        doneCount() { return this.shoppingList.filter(i => i.done).length; }
-    },
+    computed: { doneCount() { return this.shoppingList.filter(i => i.done).length; } },
     methods: {
-        // 購物清單功能
-        addShopItem() {
-            if(!this.newItemName) return;
-            this.shoppingList.push({ name: this.newItemName, done: false });
-            this.newItemName = '';
-            this.saveAll();
+        getEmoji(id) { return this.categories.find(c => c.id === id)?.emoji || '📍'; },
+        getTabDate(i) { const d = new Date(); d.setDate(d.getDate() + i); return `${d.getMonth()+1}/${d.getDate()}`; },
+        autoSearchMap(loc) { if(loc) window.open(`http://googleusercontent.com/maps.google.com/2{encodeURIComponent(loc)}`, '_blank'); },
+        addDay() { this.itinerary.push({ events: [] }); this.saveLocal(); },
+        openAdd() { 
+            this.isNew = true; 
+            this.form = { category: 'spot', location: '', from: '', time: '12:00', cost: 0, flightNum: '' };
+            this.showModal = true; 
         },
-        toggleShopItem(index) {
-            this.shoppingList[index].done = !this.shoppingList[index].done;
-            this.saveAll();
+        openEdit(idx) { 
+            this.isNew = false; this.editIdx = idx;
+            this.form = {...this.itinerary[this.activeDay].events[idx]};
+            this.showModal = true;
         },
-        removeShopItem(index) {
-            this.shoppingList.splice(index, 1);
-            this.saveAll();
+        save() {
+            if(this.isNew) this.itinerary[this.activeDay].events.push({...this.form});
+            else this.itinerary[this.activeDay].events[this.editIdx] = {...this.form};
+            this.itinerary[this.activeDay].events.sort((a,b) => a.time.localeCompare(b.time));
+            this.showModal = false; this.saveLocal();
         },
-        // 行程功能 (同 V34)
-        getEmoji(id) { return {spot:'🌸', eat:'🍱', shop:'🛍️', hotel:'🏨', transport:'🚃', flight:'✈️'}[id] || '📍'; },
-        getTabDate(i) { const d = new Date(); d.setDate(d.getDate()+i); return `${d.getMonth()+1}/${d.getDate()}`; },
-        autoSearchMap(loc) { window.open(`https://www.google.com/maps/search/${encodeURIComponent(loc)}`, '_blank'); },
-        saveAll() {
-            localStorage.setItem('travel_itinerary_v35', JSON.stringify(this.itinerary));
-            localStorage.setItem('travel_shopping_v35', JSON.stringify(this.shoppingList));
-        }
+        addShopItem() { if(this.newItemName) { this.shoppingList.push({name:this.newItemName, done:false}); this.newItemName=''; this.saveLocal(); } },
+        toggleShopItem(idx) { this.shoppingList[idx].done = !this.shoppingList[idx].done; this.saveLocal(); },
+        removeShopItem(idx) { this.shoppingList.splice(idx,1); this.saveLocal(); },
+        saveLocal() { localStorage.setItem('travel_v36', JSON.stringify({itinerary:this.itinerary, shopping:this.shoppingList})); }
     },
     mounted() {
-        const iData = localStorage.getItem('travel_itinerary_v35');
-        const sData = localStorage.getItem('travel_shopping_v35');
-        if(iData) this.itinerary = JSON.parse(iData);
-        if(sData) this.shoppingList = JSON.parse(sData);
-        setInterval(() => { this.currentTime = new Date().toLocaleTimeString('zh-HK', {hour12:false, hour:'2-digit', minute:'2-digit'}); }, 1000);
+        const data = JSON.parse(localStorage.getItem('travel_v36'));
+        if(data) { this.itinerary = data.itinerary; this.shoppingList = data.shopping || []; }
     }
 }).mount('#app');
 </script>
